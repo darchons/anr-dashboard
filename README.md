@@ -1,4 +1,4 @@
-anr-dashboard
+Fennec ANR Dashboard
 =============
 
-Fennec ANR (App Not Responding) Dashboard
+ANR Dashboard is a presentation of Fennec ANR (App Not Responding) reports submitted through Telemetry as part of Fennec Nightly or Aurora.
