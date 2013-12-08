@@ -1,0 +1,18 @@
+
+body {
+    margin: 2em auto;
+}
+
+.navbar-form {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.plot-holder {
+    height: 400px;
+}
+
+.plot {
+    width: 100%;
+}
+

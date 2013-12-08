@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>ANR Dashboard</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap -->
+    <link href="https://netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/dashboard.css" rel="stylesheet">
+  </head>
+  <body>
+
+    <div class="container">
+      <div class="navbar navbar-default" role="navigation">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle"
+                  data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle header</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <span class="navbar-brand">ANR Dashboard</a>
+        </div>
+
+        <div class="navbar-collapse collapse">
+          <form class="navbar-form navbar-link navbar-left">
+            Displaying
+            <span id="navbar-count"></span> ANR reports
+            <span id="navbar-filtered" class="hide"> (filtered) </span>from
+            <select id="navbar-from" class="form-control">
+              <option>last week</option>
+              <option>two weeks ago</option>
+              <option>three weeks ago</option>
+              <option>four weeks ago</option>
+            </select>
+            grouped by
+            <select id="navbar-groupby" class="form-control">
+            </select>
+            <button type="button" class="btn btn-default hide"
+                    id="navbar-filter" data-placement="bottom">
+              <span class="glyphicon glyphicon-filter"></span>
+              <span>Filter</span>
+            </button>
+            <div id="popover-filter" class="hide">
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="well">
+        <div class="row">
+          <div class="col-md-6 plot-holder">
+            <form class="text-center form-inline">
+              <label>Top ANRs</label>
+            </form>
+            <div id="anr-plot" class="plot"></div>
+          </div>
+          <div class="col-md-6 plot-holder">
+            <form class="text-center form-inline">
+              <label>System information for
+                <select id="info-dim-value" class="form-control">
+                </select>
+              </label>
+            </form>
+            <div id="info-plot" class="plot"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="well hide">
+        <h5>ANRs</h5>
+      </div>
+    </div>
+
+    <div id="flotTip" class="tooltip in bottom">
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://code.jquery.com/jquery.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.1/jquery.flot.min.js"></script>
+    <script src="js/jquery.flot.stack.min.js"></script>
+    <script src="js/jquery.flot.tooltip.min.js"></script>
+    <script src="js/color.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/datejs/1.0/date.min.js"></script>
+
+    <script src="js/anr-telemetry.js"></script>
+    <script src="js/dashboard.js"></script>
+  </body>
+</html>
