@@ -67,7 +67,7 @@ ANRTelemetry.prototype = {
         var self = this;
         this._get(this.index.main_thread, function(content) {
             self._mainThread = content;
-            this._getThreads([this._mainThread[key]], cb);
+            self._getThreads([self._mainThread[key]], cb);
         });
     },
 
@@ -78,7 +78,7 @@ ANRTelemetry.prototype = {
         var self = this;
         this._get(this.index.background_threads, function(content) {
             self._backgroundThreads = content;
-            this._getThreads(this._backgroundThreads[key], cb);
+            self._getThreads(self._backgroundThreads[key], cb);
         });
     },
 };
