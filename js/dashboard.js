@@ -144,6 +144,10 @@ function replotInfo(elem, dim, value) {
 
     var seriescount = 0;
     var infos = Object.keys(agg);
+    infos.sort(function(a, b) {
+        return a === b ? 0 :
+               a.toUpperCase() < b.toUpperCase() ? 1 : -1;
+    });
     var data = infos.map(function(info, index) {
         var histogram = agg[info];
         var valuesarray = Object.keys(histogram);
@@ -235,7 +239,7 @@ function replotInfo(elem, dim, value) {
         },
         yaxis: {
             show: true,
-            ticks: Object.keys(agg).map(function(info, index) {
+            ticks: infos.map(function(info, index) {
                 return [index, info];
             }),
         },
