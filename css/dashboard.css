@@ -8,6 +8,19 @@ body {
     margin-bottom: 10px;
 }
 
+.tooltip.right .tooltip-inner {
+    max-width: none;
+}
+
+#anr-plot-stack {
+    text-align: left;
+    margin: 5px;
+}
+
+.tooltip hr {
+    margin: 5px;
+}
+
 .plot-holder {
     height: 400px;
 }

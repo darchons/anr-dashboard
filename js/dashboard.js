@@ -6,6 +6,8 @@ var anrTelemetry = null;
 var serverUri = "http://people.mozilla.org/~nchen/anrs/anr-{from}-{to}";
 var defaultDimension = "submission_date";
 var topANRs = 10;
+var maxStackFrames = 10;
+
 var anrColors = (function() {
     var colors = [];
     for (var i = 0; i <= topANRs; i++) {
@@ -45,17 +47,70 @@ function replotANR(elem, dim) {
             return [index, otherANRs.reduce(function(prev, anr) {
                 return prev + anr.getCountByValue(value);
             }, 0)];
-        })
+        }),
+        anr: null,
     }];
     anrs.slice(-topANRs).forEach(function(anr) {
         data.push({
             data: values.map(function(value, index) {
                 return [index, anr.getCountByValue(value)];
-            })
+            }),
+            anr: anr,
         });
     });
 
-    $.plot(elem, data, {
+    function _tooltip(label, xval, yval, item) {
+        var tip = item.series.data[item.dataIndex][1] + " reports";
+        var anr = item.series.anr;
+        if (anr) {
+            var out = null;
+            anr.getMainThread(function(threads) {
+                var stack = "<hr>";
+                var count = 0;
+                threads[0].getStack().every(function(frame, index) {
+                    if (!frame.isJava()) {
+                        return true;
+                    }
+                    var line = frame.getLine();
+                    stack += (count ? "<br>" : "") +
+                        frame.getFunction() +
+                        (line ? " (line " + line + ")" : "");
+                    return (++count) < maxStackFrames;
+                });
+                if (out) {
+                    var tipelem = $("#flotTip");
+                    var origheight = tipelem.height();
+                    $("#anr-plot-stack").html(stack);
+                    tipelem.offset({
+                        top: tipelem.offset().top -
+                             (tipelem.height() - origheight) / 2,
+                    });
+                } else {
+                    out = stack;
+                }
+            });
+            out = "<div id='anr-plot-stack'>" + (out || "") + "</div>";
+            tip += out;
+        }
+        return tip;
+    }
+    function _tooltipHover(item, tooltip) {
+        var baroffset = plotobj.pointOffset({
+            x: item.datapoint[0] + 0.5,
+            y: (item.datapoint[1] + item.datapoint[2]) / 2,
+        });
+        var plotoffset = elem.offset();
+        tooltip.removeClass("bottom").addClass("right")
+        .html(
+            "<div class='tooltip-inner'>" + tooltip.html() + "</div>" +
+            "<div class='tooltip-arrow'></div>")
+        .offset({
+            left: plotoffset.left + baroffset.left,
+            top: plotoffset.top + baroffset.top - tooltip.height() / 2,
+        });
+    }
+
+    var plotobj = $.plot(elem, data, {
         series: {
             stack: true,
             bars: {
@@ -75,6 +130,11 @@ function replotANR(elem, dim) {
             }),
         },
         colors: anrColors,
+        tooltip: true,
+        tooltipOpts: {
+            content: _tooltip,
+            onHover: _tooltipHover,
+        },
     });
 }
 
@@ -148,7 +208,8 @@ function replotInfo(elem, dim, value) {
             y: item.datapoint[1] - 0.5,
         });
         var plotoffset = elem.offset();
-        tooltip.html(
+        tooltip.removeClass("right").addClass("bottom")
+        .html(
             "<div class='tooltip-inner'>" + tooltip.html() + "</div>" +
             "<div class='tooltip-arrow'></div>")
         .offset({
@@ -156,6 +217,7 @@ function replotInfo(elem, dim, value) {
             top: plotoffset.top + baroffset.top,
         });
     }
+
     var plotobj = $.plot(elem, plotdata, {
         series: {
             stack: true,
