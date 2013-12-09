@@ -235,12 +235,9 @@ Thread.prototype = {
     },
 
     getStack: function() {
-        if (!this._stack) {
-            this._stack = this._thread.stack.map(function(frame) {
-                return new StackFrame(frame);
-            });
-        }
-        return this._stack;
+        return this._thread.stack.map(function(frame) {
+            return new StackFrame(frame);
+        });
     },
 };
 
