@@ -25,6 +25,7 @@ ANRTelemetry.prototype = {
         }
         this._root = rootUri
         this._dimensions = {};
+        this._threads = {};
 
         var self = this;
         this._get("index.json", function(index) {
@@ -37,49 +38,52 @@ ANRTelemetry.prototype = {
         return Object.keys(this.index.dimensions);
     },
 
-    getDimension: function(dim, cb) {
-        if (!this.index.dimensions[dim]) {
+    _getData: function(dim, obj, data, cache, cb) {
+        if (!this.index.dimensions[dim] ||
+            !data[dim]) {
             throw new Error("ANRTelemetry: invalid dimension.");
         }
         var self = this;
-        function _getCachedDimension() {
-            return cb(new Dimension(self, dim, self._dimensions[dim]));
+        function _getCached() {
+            return cb(new obj(self, dim, cache[dim]));
         }
-        if (this._dimensions[dim]) {
-            return _getCachedDimension();
+        if (cache[dim]) {
+            return _getCached();
         }
-        this._get(this.index.dimensions[dim], function(content) {
-            self._dimensions[dim] = content;
-            _getCachedDimension();
+        this._get(data[dim], function(content) {
+            cache[dim] = content;
+            _getCached();
         });
     },
 
-    _getThreads: function(threads, cb) {
-        return cb(threads.map(function(thread) {
-            return new Thread(thread);
-        }));
+    getDimension: function(dim, cb) {
+        return this._getData(dim, Dimension,
+            this.index.dimensions, this._dimensions, cb);
+    },
+
+    _getThreads: function(type, key, data, cache, cb) {
+        function _getCached() {
+            return cb(cache[type].map(function(thread) {
+                return new Thread(thread);
+            }));
+        }
+        if (cache[type]) {
+            return _getCached();
+        }
+        this._get(data, function(content) {
+            cache[type] = [].concat(content);
+            _getCached();
+        });
     },
 
     _getMainThread: function(key, cb) {
-        if (this._mainThread) {
-            return this._getThreads([this._mainThread[key]], cb);
-        }
-        var self = this;
-        this._get(this.index.main_thread, function(content) {
-            self._mainThread = content;
-            self._getThreads([self._mainThread[key]], cb);
-        });
+        this._getThreads("mainThread", key,
+            this.index.main_thread, this._threads, cb);
     },
 
     _getBackgroundThreads: function(key, cb) {
-        if (this._backgroundThreads) {
-            return this._getThreads(this._backgroundThreads[key], cb);
-        }
-        var self = this;
-        this._get(this.index.background_threads, function(content) {
-            self._backgroundThreads = content;
-            self._getThreads(self._backgroundThreads[key], cb);
-        });
+        this._getThreads("backgroundThreads", key,
+            this.index.main_thread, this._threads, cb);
     },
 };
 
