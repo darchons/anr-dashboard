@@ -112,7 +112,7 @@ Dimension.prototype = {
     },
 
     getANRCount: function() {
-        var agg = this.getAggregate();
+        var agg = this.getInfoDistribution();
         var max = 0;
         for (var info in agg) {
             var histogram = agg[info];
@@ -148,30 +148,24 @@ Dimension.prototype = {
         }
     },
 
-    getAggregateByValue: function(value) {
+    getInfoDistribution: function(value) {
+        value = value || null;
         if (!this._value_agg[value]) {
             var self = this;
             this._value_agg[value] = Object.keys(this._content)
                                            .reduce(function(prev, key) {
-                self._aggregate(prev, self._content[key][value]);
-                return prev;
-            }, {});
-        }
-        return this._value_agg[value];
-    },
-
-    getAggregate: function() {
-        if (!this._agg) {
-            var self = this;
-            this._agg = Object.keys(this._content).reduce(function(prev, key) {
-                var anr = self._content[key];
-                for (var value in anr) {
-                    self._aggregate(prev, anr[value]);
+                if (value) {
+                    self._aggregate(prev, self._content[key][value]);
+                } else {
+                    var anr = self._content[key];
+                    for (var val in anr) {
+                        self._aggregate(prev, anr[val]);
+                    }
                 }
                 return prev;
             }, {});
         }
-        return this._agg;
+        return this._value_agg[value];
     },
 
     filter: function() {

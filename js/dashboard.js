@@ -141,8 +141,7 @@ function replotANR(elem, dim) {
 }
 
 function replotInfo(elem, dim, value) {
-    var agg = value ? dim.getAggregateByValue(value)
-                    : dim.getAggregate();
+    var agg = dim.getInfoDistribution(value);
 
     var seriescount = 0;
     var infos = Object.keys(agg);
