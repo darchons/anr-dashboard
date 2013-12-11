@@ -60,7 +60,8 @@ function replotANR(elem, dim) {
     });
 
     function _tooltip(label, xval, yval, item) {
-        var tip = item.series.data[item.dataIndex][1] + " reports";
+        var tip = values[item.dataIndex] + ": " +
+                  item.series.data[item.dataIndex][1] + " reports";
         var anr = item.series.anr;
         if (anr) {
             var out = null;
@@ -94,6 +95,7 @@ function replotANR(elem, dim) {
         }
         return tip;
     }
+
     function _tooltipHover(item, tooltip) {
         var baroffset = plotobj.pointOffset({
             x: item.datapoint[0] + 0.5,
