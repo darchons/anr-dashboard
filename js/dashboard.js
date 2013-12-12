@@ -57,7 +57,7 @@ function revSmartSort(str1, str2) {
     return -smartSort(str1, str2);
 }
 
-function replotReports(elem, reports) {
+function replotReports(elem, reports, sessions) {
     var values = reports.dimensionValues();
     values.sort(smartSort);
 
@@ -166,7 +166,7 @@ function replotReports(elem, reports) {
     });
 }
 
-function replotInfo(elem, reports, value) {
+function replotInfo(elem, reports, sessions, value) {
     var agg = reports.infoDistribution(value);
 
     var seriescount = 0;
@@ -280,16 +280,27 @@ function replotInfo(elem, reports, value) {
 }
 
 $("#navbar-groupby").change(function() {
+
+    $("#navbar-count").text(0);
+    $("#info-dim-value").empty().off("change");
+
     var val = $("#navbar-groupby").val();
     if (!val) {
         $.plot($("#report-plot"), [[0, 0]], {grid: {show: true}});
         $.plot($("#info-plot"), [[0, 0]], {grid: {show: false}});
-        $("#info-dim-value").empty().off("change");
-        return $("#navbar-count").text(0);
+        return;
     }
-    telemetry.reports(val, function(reports) {
+
+    var reports = null;
+    var sessions = null;
+    function replot() {
+        replotReports($("#report-plot"), reports, sessions);
+        $("#info-dim-value").trigger("change");
+    }
+
+    telemetry.reports(val, function(r) {
+        reports = r;
         $("#navbar-count").text(reports.cumulativeCount());
-        replotReports($("#report-plot"), reports);
 
         var infodim = $("#info-dim-value").empty().off("change");
         var values = reports.dimensionValues();
@@ -300,9 +311,14 @@ $("#navbar-groupby").change(function() {
         });
         infodim[0].selectedIndex = 0;
         infodim.change(function() {
-            replotInfo($("#info-plot"), reports,
+            replotInfo($("#info-plot"), reports, sessions,
                 infodim[0].selectedIndex == 0 ? null : infodim.val());
-        }).trigger("change");
+        });
+        sessions && replot();
+    });
+    telemetry.sessions(val, function(s) {
+        sessions = s;
+        reports && replot();
     });
 });
 
