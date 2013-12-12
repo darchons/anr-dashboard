@@ -69,7 +69,7 @@ ANRTelemetry.prototype = {
 
     _getThreads: function(type, key, data, cache, cb) {
         function _getCached() {
-            return cb(cache[type].map(function(thread) {
+            return cb(cache[type][key].map(function(thread) {
                 return new Thread(thread);
             }));
         }
@@ -77,7 +77,7 @@ ANRTelemetry.prototype = {
             return _getCached();
         }
         this._get(data, function(content) {
-            cache[type] = [].concat(content);
+            cache[type] = content;
             _getCached();
         });
     },
