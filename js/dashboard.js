@@ -292,6 +292,7 @@ $("#navbar-groupby").change(function() {
         $.plot($("#info-plot"), [[0, 0]], {grid: {show: false}});
         return;
     }
+    $("#info-dim-name").text(val);
 
     var reports = null;
     var sessions = null;
@@ -306,7 +307,7 @@ $("#navbar-groupby").change(function() {
 
         var values = reports.dimensionValues();
         values.sort(smartSort);
-        values.unshift("(any value)");
+        values.unshift("any");
         values.forEach(function(value) {
             infodim.append($("<option/>").text(value))
         });
