@@ -206,6 +206,10 @@ function CollectionItem(telemetry, name, value_histograms) {
 
 CollectionItem.prototype = {
 
+    name: function() {
+        return this._name;
+    },
+
     count: function(dimensionValue) {
         var value = dimensionValue || null;
         if (!this._value_count[value]) {
