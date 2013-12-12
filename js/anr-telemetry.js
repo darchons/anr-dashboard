@@ -25,6 +25,7 @@ ANRTelemetry.prototype = {
         }
         this._root = rootUri
         this._dimensions = {};
+        this._sessions = {};
         this._threads = {};
 
         var self = this;
@@ -34,18 +35,18 @@ ANRTelemetry.prototype = {
         });
     },
 
-    getDimensions: function() {
+    dimensions: function() {
         return Object.keys(this.index.dimensions);
     },
 
-    _getData: function(dim, obj, data, cache, cb) {
+    _getCollection: function(dim, obj, data, cache, cb) {
         if (!this.index.dimensions[dim] ||
             !data[dim]) {
             throw new Error("ANRTelemetry: invalid dimension.");
         }
         var self = this;
         function _getCached() {
-            return cb(new obj(self, dim, cache[dim]));
+            return cb(new Collection(self, dim, cache[dim], obj));
         }
         if (cache[dim]) {
             return _getCached();
@@ -56,9 +57,14 @@ ANRTelemetry.prototype = {
         });
     },
 
-    getDimension: function(dim, cb) {
-        return this._getData(dim, Dimension,
+    reports: function(dim, cb) {
+        return this._getCollection(dim, Report,
             this.index.dimensions, this._dimensions, cb);
+    },
+
+    sessions: function(dim, cb) {
+        return this._getCollection(dim, Session,
+            this.index.sessions, this._sessions, cb);
     },
 
     _getThreads: function(type, key, data, cache, cb) {
@@ -76,64 +82,14 @@ ANRTelemetry.prototype = {
         });
     },
 
-    _getMainThread: function(key, cb) {
+    _mainThread: function(key, cb) {
         this._getThreads("mainThread", key,
             this.index.main_thread, this._threads, cb);
     },
 
-    _getBackgroundThreads: function(key, cb) {
+    _backgroundThreads: function(key, cb) {
         this._getThreads("backgroundThreads", key,
-            this.index.main_thread, this._threads, cb);
-    },
-};
-
-function Dimension(anr, dim, content) {
-    this._anr = anr;
-    this._dim = dim;
-    this._content = content;
-    this._value_agg = {};
-}
-
-Dimension.prototype = {
-
-    getName: function() {
-        return this._dim;
-    },
-
-    getValues: function() {
-        var values = {};
-        for (var key in this._content) {
-            var anr = this._content[key];
-            for (var value in anr) {
-                values[value] = null;
-            }
-        }
-        return Object.keys(values);
-    },
-
-    getANRCount: function() {
-        var agg = this.getInfoDistribution();
-        var max = 0;
-        for (var info in agg) {
-            var histogram = agg[info];
-            var count = 0;
-            for (var value in histogram) {
-                count += histogram[value];
-            }
-            max = Math.max(max, count);
-        }
-        return max;
-    },
-
-    getUniqueANRCount: function() {
-        return Object.keys(this._content).length;
-    },
-
-    getANRs: function() {
-        var self = this;
-        return Object.keys(this._content).map(function(key) {
-            return new ANR(self._anr, key, self._content[key]);
-        });
+            this.index.background_threads, this._threads, cb);
     },
 
     _aggregate: function(agg, histograms) {
@@ -148,47 +104,6 @@ Dimension.prototype = {
         }
     },
 
-    getInfoDistribution: function(value) {
-        value = value || null;
-        if (!this._value_agg[value]) {
-            var self = this;
-            this._value_agg[value] = Object.keys(this._content)
-                                           .reduce(function(prev, key) {
-                if (value) {
-                    self._aggregate(prev, self._content[key][value]);
-                } else {
-                    var anr = self._content[key];
-                    for (var val in anr) {
-                        self._aggregate(prev, anr[val]);
-                    }
-                }
-                return prev;
-            }, {});
-        }
-        return this._value_agg[value];
-    },
-
-    filter: function() {
-    },
-};
-
-function ANR(anr, key, value_histograms) {
-    this._anr = anr;
-    this._key = key;
-    this._value_histograms = value_histograms;
-    this._value_count = {};
-}
-
-ANR.prototype = {
-
-    getMainThread: function(cb) {
-        return this._anr._getMainThread(this._key, cb);
-    },
-
-    getBackgroundThreads: function(cb) {
-        return this._anr._getBackgroundThreads(this._key, cb);
-    },
-
     _countHistograms: function(histograms) {
         var max = 0;
         for (var info in histograms) {
@@ -201,25 +116,153 @@ ANR.prototype = {
         }
         return max;
     },
+};
 
-    getCountByValue: function(value) {
+function Collection(telemetry, dim, content, obj) {
+    this._telemetry = telemetry;
+    this._dim = dim;
+    this._content = content;
+    this._obj = obj;
+    this._value_agg = {};
+}
+
+Collection.prototype = {
+
+    dimension: function() {
+        return this._dim;
+    },
+
+    dimensionValues: function() {
+        var values = {};
+        for (var name in this._content) {
+            var item = this._content[name];
+            for (var value in item) {
+                values[value] = null;
+            }
+        }
+        return Object.keys(values);
+    },
+
+    cumulativeCount: function() {
+        var agg = this.infoDistribution();
+        var max = 0;
+        for (var info in agg) {
+            var histogram = agg[info];
+            var count = 0;
+            for (var value in histogram) {
+                count += histogram[value];
+            }
+            max = Math.max(max, count);
+        }
+        return max;
+    },
+
+    length: function() {
+        return Object.keys(this._content).length;
+    },
+
+    all: function() {
+        var self = this;
+        return Object.keys(this._content).map(function(name) {
+            return new self._obj(self._telemetry, name, self._content[name]);
+        });
+    },
+
+    byName: function(name) {
+        return new this._obj(this._telemetry, name, this._content[name]);
+    },
+
+    infoDistribution: function(dimensionValue) {
+        var value = dimensionValue || null;
+        if (!this._value_agg[value]) {
+            var self = this;
+            this._value_agg[value] = Object.keys(this._content)
+                                           .reduce(function(prev, name) {
+                if (value) {
+                    self._telemetry._aggregate(prev, self._content[name][value]);
+                } else {
+                    var item = self._content[name];
+                    for (var val in item) {
+                        self._telemetry._aggregate(prev, item[val]);
+                    }
+                }
+                return prev;
+            }, {});
+        }
+        return this._value_agg[value];
+    },
+
+    filter: function() {
+    },
+};
+
+function CollectionItem(telemetry, name, value_histograms) {
+    this._telemetry = telemetry;
+    this._name = name;
+    this._value_histograms = value_histograms;
+    this._value_count = {};
+    this._value_agg = {};
+}
+
+CollectionItem.prototype = {
+
+    count: function(dimensionValue) {
+        var value = dimensionValue || null;
         if (!this._value_count[value]) {
-            this._value_count[value] =
-                this._countHistograms(this._value_histograms[value]);
+            if (value) {
+                this._value_count[value] =
+                    this._telemetry._countHistograms(
+                        this._value_histograms[value]);
+            } else {
+                var count = 0;
+                for (var val in this._value_histograms) {
+                    count += this._telemetry._countHistograms(
+                        this._value_histograms[val]);
+                }
+                this._value_count[value] = count;
+            }
         }
         return this._value_count[value];
     },
 
-    getCount: function() {
-        if (!this._count) {
-            var count = 0;
-            for (var value in this._value_histograms) {
-                count += this._countHistograms(this._value_histograms[value]);
+    infoDistribution: function(dimensionValue) {
+        var value = dimensionValue || null;
+        if (!this._value_agg[value]) {
+            if (value) {
+                this._value_agg[value] = this._telemetry._aggregate(
+                    {}, this._value_histograms[value]);
+            } else {
+                var agg = {};
+                for (var val in this._value_histograms) {
+                    this._telemetry._aggregate(agg, this._value_histograms[val]);
+                }
+                this._value_agg[value] = agg;
             }
-            this._count = count;
         }
-        return this._count;
+        return this._value_agg[value];
     },
+};
+
+function Session() {
+    CollectionItem.apply(this, arguments);
+}
+
+Session.prototype = new CollectionItem();
+Session.prototype.constructor = Session;
+
+function Report() {
+    CollectionItem.apply(this, arguments);
+}
+
+Report.prototype = new CollectionItem();
+Report.prototype.constructor = Report;
+
+Report.prototype.mainThread = function(cb) {
+    return this._telemetry._mainThread(this._name, cb);
+};
+
+Report.prototype.backgroundThreads = function(cb) {
+    return this._telemetry._backgroundThreads(this._name, cb);
 };
 
 function Thread(thread) {
@@ -228,11 +271,11 @@ function Thread(thread) {
 
 Thread.prototype = {
 
-    getName: function() {
+    name: function() {
         return this._thread.name;
     },
 
-    getStack: function() {
+    stack: function() {
         return this._thread.stack.map(function(frame) {
             return new StackFrame(frame);
         });
@@ -253,7 +296,7 @@ StackFrame.prototype = {
         return this._components[0] === "j";
     },
 
-    getFunction: function() {
+    functionName: function() {
         if (this.isJava()) {
             return this._components[1];
         } else if (this.isNative()) {
@@ -261,13 +304,13 @@ StackFrame.prototype = {
         }
     },
 
-    getLib: function() {
+    libName: function() {
         if (this.isNative()) {
             return this._components[1];
         }
     },
 
-    getLine: function() {
+    lineNumber: function() {
         if (this.isJava()) {
             return this._components[2];
         }
