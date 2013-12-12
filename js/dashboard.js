@@ -2,17 +2,17 @@ $(function() {
 
 "use strict";
 
-var anrTelemetry = null;
+var telemetry = null;
 var serverUri = "http://people.mozilla.org/~nchen/anrs/anr-{from}-{to}";
 var defaultDimension = "submission_date";
-var topANRs = 10;
-var maxStackFrames = 10;
 
-var anrColors = (function() {
+var maxStackFrames = 10;
+var topReports = 10;
+var reportColors = (function() {
     var colors = [];
-    for (var i = 0; i <= topANRs; i++) {
+    for (var i = 0; i <= topReports; i++) {
         colors.push(Color({
-            h: 222 - 222 * i / topANRs,
+            h: 222 - 222 * i / topReports,
             s: 55,
             l: 55,
         }).hexString());
@@ -31,69 +31,69 @@ $("#navbar-filter").popover({
     }
 });
 
-function replotANR(elem, dim) {
-    var values = dim.getValues();
+function replotReports(elem, reports) {
+    var values = reports.dimensionValues();
     values.sort();
 
-    var anrs = dim.getANRs();
-    anrs.sort(function(anr1, anr2) {
-        return anr1.getCount() - anr2.getCount();
+    var reports = reports.all();
+    reports.sort(function(r1, r2) {
+        return r1.count() - r2.count();
     });
-    var otherANRs = anrs.slice(0, -topANRs);
+    var otherReports = reports.slice(0, -topReports);
 
     var data = [{
         label: "other",
         data: values.map(function(value, index) {
-            return [index, otherANRs.reduce(function(prev, anr) {
-                return prev + anr.getCountByValue(value);
+            return [index, otherReports.reduce(function(prev, report) {
+                return prev + report.count(value);
             }, 0)];
         }),
-        anr: null,
+        report: null,
     }];
-    anrs.slice(-topANRs).forEach(function(anr) {
+    reports.slice(-topReports).forEach(function(report) {
         data.push({
             data: values.map(function(value, index) {
-                return [index, anr.getCountByValue(value)];
+                return [index, report.count(value)];
             }),
-            anr: anr,
+            report: report,
         });
     });
 
     function _tooltip(label, xval, yval, item) {
         var tip = values[item.dataIndex] + ": " +
                   item.series.data[item.dataIndex][1] + " reports";
-        var anr = item.series.anr;
-        if (anr) {
-            var out = null;
-            anr.getMainThread(function(threads) {
-                var stack = "<hr>";
-                var count = 0;
-                threads[0].getStack().every(function(frame, index) {
-                    if (!frame.isJava()) {
-                        return true;
-                    }
-                    var line = frame.getLine();
-                    stack += (count ? "<br>" : "") +
-                        frame.getFunction() +
-                        (line ? " (line " + line + ")" : "");
-                    return (++count) < maxStackFrames;
-                });
-                if (out) {
-                    var tipelem = $("#flotTip");
-                    var origheight = tipelem.height();
-                    $("#anr-plot-stack").html(stack);
-                    tipelem.offset({
-                        top: tipelem.offset().top -
-                             (tipelem.height() - origheight) / 2,
-                    });
-                } else {
-                    out = stack;
-                }
-            });
-            out = "<div id='anr-plot-stack'>" + (out || "") + "</div>";
-            tip += out;
+        var report = item.series.report;
+        if (!report) {
+            return tip;
         }
-        return tip;
+        var out = null;
+        report.mainThread(function(threads) {
+            var stack = "<hr>";
+            var count = 0;
+            threads[0].stack().every(function(frame, index) {
+                if (!frame.isJava()) {
+                    return true;
+                }
+                var line = frame.lineNumber();
+                stack += (count ? "<br>" : "") +
+                    frame.functionName() +
+                    (line ? " (line " + line + ")" : "");
+                return (++count) < maxStackFrames;
+            });
+            if (out) {
+                var tipelem = $("#flotTip");
+                var origheight = tipelem.height();
+                $("#report-plot-stack").html(stack);
+                tipelem.offset({
+                    top: tipelem.offset().top -
+                         (tipelem.height() - origheight) / 2,
+                });
+            } else {
+                out = stack;
+            }
+        });
+        out = "<div id='report-plot-stack'>" + (out || "") + "</div>";
+        return tip + out;
     }
 
     function _tooltipHover(item, tooltip) {
@@ -131,7 +131,7 @@ function replotANR(elem, dim) {
                 return [index, value];
             }),
         },
-        colors: anrColors,
+        colors: reportColors,
         tooltip: true,
         tooltipOpts: {
             content: _tooltip,
@@ -140,8 +140,8 @@ function replotANR(elem, dim) {
     });
 }
 
-function replotInfo(elem, dim, value) {
-    var agg = dim.getInfoDistribution(value);
+function replotInfo(elem, reports, value) {
+    var agg = reports.infoDistribution(value);
 
     var seriescount = 0;
     var infos = Object.keys(agg);
@@ -175,17 +175,17 @@ function replotInfo(elem, dim, value) {
             for (var i = prevmapto + 1; i < mapto; i++) {
                 plotdata[i] = (plotdata[i] || {
                     data: [],
-                    anr_info: [],
+                    info: [],
                 });
                 plotdata[i].data.push([0, series.data[1]]);
-                plotdata[i].anr_info.push(null);
+                plotdata[i].info.push(null);
             }
             plotdata[mapto] = (plotdata[mapto] || {
                 data: [],
-                anr_info: [],
+                info: [],
             });
             plotdata[mapto].data.push(series.data);
-            plotdata[mapto].anr_info.push(series.info);
+            plotdata[mapto].info.push(series.info);
             prevmapto = mapto;
         });
     });
@@ -204,7 +204,7 @@ function replotInfo(elem, dim, value) {
     }
 
     function _tooltip(label, xval, yval, item) {
-        return item.series.anr_info[item.dataIndex] + ": " +
+        return item.series.info[item.dataIndex] + ": " +
                Math.round(item.series.data[item.dataIndex][0]) + "%";
     }
     function _tooltipHover(item, tooltip) {
@@ -259,17 +259,17 @@ function replotInfo(elem, dim, value) {
 $("#navbar-groupby").change(function() {
     var val = $("#navbar-groupby").val();
     if (!val) {
-        $.plot($("#anr-plot"), [[0, 0]], {grid: {show: true}});
+        $.plot($("#report-plot"), [[0, 0]], {grid: {show: true}});
         $.plot($("#info-plot"), [[0, 0]], {grid: {show: false}});
         $("#info-dim-value").empty().off("change");
         return $("#navbar-count").text(0);
     }
-    anrTelemetry.getDimension(val, function(dim) {
-        $("#navbar-count").text(dim.getANRCount());
-        replotANR($("#anr-plot"), dim);
+    telemetry.reports(val, function(reports) {
+        $("#navbar-count").text(reports.cumulativeCount());
+        replotReports($("#report-plot"), reports);
 
         var infodim = $("#info-dim-value").empty().off("change");
-        var values = dim.getValues();
+        var values = reports.dimensionValues();
         values.sort();
         values.unshift("(all groups)");
         values.forEach(function(value) {
@@ -277,7 +277,7 @@ $("#navbar-groupby").change(function() {
         });
         infodim[0].selectedIndex = 0;
         infodim.change(function() {
-            replotInfo($("#info-plot"), dim,
+            replotInfo($("#info-plot"), reports,
                 infodim[0].selectedIndex == 0 ? null : infodim.val());
         }).trigger("change");
     });
@@ -299,9 +299,9 @@ $("#navbar-from").change(function() {
 
     var groupby = $("#navbar-groupby").empty().trigger("change");
 
-    anrTelemetry = new ANRTelemetry();
-    anrTelemetry.init(uri, function() {
-        var dims = anrTelemetry.getDimensions();
+    telemetry = new ANRTelemetry();
+    telemetry.init(uri, function() {
+        var dims = telemetry.dimensions();
         dims.sort();
         dims.forEach(function(dim) {
             groupby.append($("<option/>").text(dim));
