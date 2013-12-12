@@ -31,9 +31,35 @@ $("#navbar-filter").popover({
     }
 });
 
+var re_grouping = /\D+|\d+/g;
+function smartSort(str1, str2) {
+    var match1 = (str1 + '').match(re_grouping);
+    var match2 = (str2 + '').match(re_grouping);
+    for (var i = 0; i < match1.length && i < match2.length; i++) {
+        var diff = match1[i] - match2[i];
+        if (!isNaN(diff)) {
+            if (diff !== 0) {
+                return diff;
+            }
+            continue;
+        }
+        var m1 = match1[i].toUpperCase();
+        var m2 = match2[i].toUpperCase();
+        if (m1 < m2) {
+            return -1;
+        } else if (m1 > m2) {
+            return 1;
+        }
+    }
+    return match1.length - match2.length;
+}
+function revSmartSort(str1, str2) {
+    return -smartSort(str1, str2);
+}
+
 function replotReports(elem, reports) {
     var values = reports.dimensionValues();
-    values.sort();
+    values.sort(smartSort);
 
     var reports = reports.all();
     reports.sort(function(r1, r2) {
@@ -145,10 +171,7 @@ function replotInfo(elem, reports, value) {
 
     var seriescount = 0;
     var infos = Object.keys(agg);
-    infos.sort(function(a, b) {
-        return a === b ? 0 :
-               a.toUpperCase() < b.toUpperCase() ? 1 : -1;
-    });
+    infos.sort(revSmartSort);
     var data = infos.map(function(info, index) {
         var histogram = agg[info];
         var valuesarray = Object.keys(histogram);
@@ -270,7 +293,7 @@ $("#navbar-groupby").change(function() {
 
         var infodim = $("#info-dim-value").empty().off("change");
         var values = reports.dimensionValues();
-        values.sort();
+        values.sort(smartSort);
         values.unshift("(all groups)");
         values.forEach(function(value) {
             infodim.append($("<option/>").text(value))
@@ -302,7 +325,7 @@ $("#navbar-from").change(function() {
     telemetry = new ANRTelemetry();
     telemetry.init(uri, function() {
         var dims = telemetry.dimensions();
-        dims.sort();
+        dims.sort(smartSort);
         dims.forEach(function(dim) {
             groupby.append($("<option/>").text(dim));
         });
