@@ -281,8 +281,10 @@ function replotInfo(elem, reports, sessions, value) {
 
 $("#navbar-groupby").change(function() {
 
-    $("#navbar-count").text(0);
-    $("#info-dim-value").empty().off("change");
+    var repcount = $("#navbar-count").text(0);
+    var infodim = $("#info-dim-value");
+    var oldinfodim = infodim.val();
+    infodim.empty().off("change");
 
     var val = $("#navbar-groupby").val();
     if (!val) {
@@ -300,16 +302,19 @@ $("#navbar-groupby").change(function() {
 
     telemetry.reports(val, function(r) {
         reports = r;
-        $("#navbar-count").text(reports.cumulativeCount());
+        repcount.text(reports.cumulativeCount());
 
-        var infodim = $("#info-dim-value").empty().off("change");
         var values = reports.dimensionValues();
         values.sort(smartSort);
-        values.unshift("(all groups)");
+        values.unshift("(any value)");
         values.forEach(function(value) {
             infodim.append($("<option/>").text(value))
         });
-        infodim[0].selectedIndex = 0;
+        if (values.indexOf(oldinfodim) >= 0) {
+            infodim.val(oldinfodim);
+        } else {
+            infodim[0].selectedIndex = 0;
+        }
         infodim.change(function() {
             replotInfo($("#info-plot"), reports, sessions,
                 infodim[0].selectedIndex == 0 ? null : infodim.val());
@@ -320,7 +325,7 @@ $("#navbar-groupby").change(function() {
         sessions = s;
         reports && replot();
     });
-});
+}).trigger("change");
 
 $("#navbar-from").change(function() {
     var toDate = Date.today().last().saturday();
@@ -336,7 +341,9 @@ $("#navbar-from").change(function() {
     var uri = serverUri.replace("{from}", fromDate.toString("yyyyMMdd"))
                        .replace("{to}", toDate.toString("yyyyMMdd"));
 
-    var groupby = $("#navbar-groupby").empty().trigger("change");
+    var groupby = $("#navbar-groupby");
+    var oldgroupby = groupby.val();
+    groupby.empty();
 
     telemetry = new ANRTelemetry();
     telemetry.init(uri, function() {
@@ -345,7 +352,9 @@ $("#navbar-from").change(function() {
         dims.forEach(function(dim) {
             groupby.append($("<option/>").text(dim));
         });
-        groupby.val(defaultDimension).trigger("change");
+        groupby.val(dims.indexOf(oldgroupby) >= 0
+                    ? oldgroupby
+                    : defaultDimension).trigger("change");
     });
 }).trigger("change");
 
