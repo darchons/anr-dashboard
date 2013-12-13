@@ -59,6 +59,17 @@ function revSmartSort(str1, str2) {
 
 function replotReports(elem, reports, sessions) {
     var values = reports.dimensionValues();
+
+    var uptimes = {};
+    if (sessions) {
+        var uptimeSession = sessions.byName('uptime');
+        values.forEach(function(value) {
+            uptimes[value] = uptimeSession.count(value) / 60000;
+        });
+        values = values.filter(function(value) {
+            return (uptimes[value] || 0) >= 0.1;
+        });
+    }
     values.sort(smartSort);
 
     var reports = reports.all();
@@ -72,22 +83,25 @@ function replotReports(elem, reports, sessions) {
         data: values.map(function(value, index) {
             return [index, otherReports.reduce(function(prev, report) {
                 return prev + report.count(value);
-            }, 0)];
+            }, 0) / (sessions ? uptimes[value] : 1)];
         }),
         report: null,
     }];
     reports.slice(-topReports).forEach(function(report) {
         data.push({
             data: values.map(function(value, index) {
-                return [index, report.count(value)];
+                return [index, report.count(value) /
+                               (sessions ? uptimes[value] : 1)];
             }),
             report: report,
         });
     });
 
     function _tooltip(label, xval, yval, item) {
-        var tip = values[item.dataIndex] + ": " +
-                  item.series.data[item.dataIndex][1] + " reports";
+        var tip = values[item.dataIndex] + " : " +
+                  item.series.data[item.dataIndex][1].toPrecision(2) +
+                  " reports";
+        sessions && (tip += " / 1k user-hrs");
         var report = item.series.report;
         if (!report) {
             return tip;
@@ -169,6 +183,22 @@ function replotReports(elem, reports, sessions) {
 function replotInfo(elem, reports, sessions, value) {
     var agg = reports.infoDistribution(value);
 
+    var uptimes;
+    if (sessions) {
+        uptimes = sessions.byName('uptime').infoDistribution(value);
+        Object.keys(uptimes).forEach(function(info) {
+            var uptime = uptimes[info];
+            uptime[''] = Object.keys(uptime).reduce(
+                function(prev, val) {
+                    var v = uptime[val];
+                    if (v < 600) {
+                        delete uptime[val];
+                    }
+                    return prev + v;
+                }, 0);
+        });
+    }
+
     var seriescount = 0;
     var infos = Object.keys(agg);
     infos.sort(revSmartSort);
@@ -177,7 +207,8 @@ function replotInfo(elem, reports, sessions, value) {
         var valuesarray = Object.keys(histogram);
         seriescount = Math.max(seriescount, valuesarray.length);
         valuesarray = valuesarray.map(function(value) {
-            return [value, histogram[value]];
+            return [value, histogram[value] / (!sessions ? 1 :
+                           (uptimes[info][value] || uptimes[info]['']))];
         });
         valuesarray.sort(function(val1, val2) {
             return val2[1] - val1[1];
@@ -279,9 +310,12 @@ function replotInfo(elem, reports, sessions, value) {
     });
 }
 
+$("#navbar-normalize").prop("checked", false);
+
 $("#navbar-groupby").change(function() {
 
     var repcount = $("#navbar-count").text(0);
+    var normbtn = $("#navbar-normalize").off("change");
     var infodim = $("#info-dim-value");
     var oldinfodim = infodim.val();
     infodim.empty().off("change");
@@ -294,6 +328,7 @@ $("#navbar-groupby").change(function() {
     }
     $("#info-dim-name").text(val);
 
+    var normalize = normbtn.prop("checked");
     var reports = null;
     var sessions = null;
     function replot() {
@@ -320,12 +355,23 @@ $("#navbar-groupby").change(function() {
             replotInfo($("#info-plot"), reports, sessions,
                 infodim[0].selectedIndex == 0 ? null : infodim.val());
         });
-        sessions && replot();
+        (!normalize || sessions) && replot();
     });
-    telemetry.sessions(val, function(s) {
-        sessions = s;
-        reports && replot();
-    });
+
+    normbtn.change(function() {
+        normalize = normbtn.prop("checked");
+        if (normalize) {
+            telemetry.sessions(val, function(s) {
+                $("#report-units").text("(per 1k user-hours)");
+                sessions = s;
+                reports && replot();
+            });
+        } else {
+            $("#report-units").text("");
+            sessions = null;
+            reports && replot();
+        }
+    }).trigger("change");
 }).trigger("change");
 
 $("#navbar-from").change(function() {

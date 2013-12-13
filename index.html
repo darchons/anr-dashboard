@@ -37,6 +37,13 @@
             grouped by
             <select id="navbar-groupby" class="form-control">
             </select>
+            <div class="btn-group" data-toggle="buttons">
+              <label class="btn btn-default">
+                <input id="navbar-normalize" type="checkbox">
+                <span class="glyphicon glyphicon-indent-right"></span>
+                <span>Normalize</span>
+              </label>
+            </div>
             <button type="button" class="btn btn-default hide"
                     id="navbar-filter" data-placement="bottom">
               <span class="glyphicon glyphicon-filter"></span>
@@ -52,7 +59,7 @@
         <div class="row">
           <div class="col-md-6 plot-holder">
             <form class="text-center form-inline">
-              <label>Top reports</label>
+              <label>Top reports <span id="report-units"></span></label>
             </form>
             <div id="report-plot" class="plot"></div>
           </div>
