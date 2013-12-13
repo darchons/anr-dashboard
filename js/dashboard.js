@@ -57,12 +57,71 @@ function revSmartSort(str1, str2) {
     return -smartSort(str1, str2);
 }
 
+function replaceBrackets(str) {
+    return str && str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function fillReportModal(modal, rank, report, dimValue, sessions) {
+    modal.find(".modal-title").text(rank + " for " + dimValue);
+
+    var stacks = $("#report-stacks");
+    var template = $("#report-stacks-thread");
+    stacks.children().not(template).remove();
+
+    function addThreads(threads, append) {
+        var out = $();
+        threads.forEach(function(thread) {
+            var clone = template.clone()
+                .removeAttr("id").removeClass("hide");
+            var body = clone.find(".panel-body");
+            var stack = thread.stack();
+            var muteNative = stack.some(function(frame) {
+                return !frame.isNative();
+            });
+            stack.forEach(function(frame) {
+                var line = frame.lineNumber();
+                var func = frame.functionName();
+                var lib = frame.libName();
+                var text = func + (lib ? " (" + lib + ")" : "")
+                                + (line ? " (line " + line + ")" : "");
+                $("<li/>").text(text)
+                          .addClass(muteNative && frame.isNative() ? "text-muted" : "")
+                          .appendTo(body);
+            });
+
+            var id = "report-stacks-" + stacks.children().length;
+            clone.find(".panel-collapse")
+                 .attr("id", id)
+                 .addClass(append ? "" : "in");
+            clone.find(".panel-heading")
+                 .text(thread.name() + " stack")
+                 .attr("data-target", "#" + id);
+            out.add(append ? clone.appendTo(stacks)
+                           : clone.prependTo(stacks));
+        });
+        return out;
+    }
+
+    report.mainThread(function(threads) {
+        addThreads(threads, /* append */ false);
+    });
+    report.backgroundThreads(function(threads) {
+        addThreads(threads, /* append */ true);
+    });
+    modal.on("shown.bs.modal", function(event) {
+        replotInfo($("#report-info-plot"), report, dimValue, sessions);
+    }).on("hidden.bs.modal", function(event) {
+        $.plot($("#report-info-plot"), [[0, 0]], {grid: {show: false}});
+    });
+}
+
 function replotReports(elem, reports, sessions) {
     var values = reports.dimensionValues();
 
-    var uptimes = {};
+    var uptimes = null;
     if (sessions) {
         var uptimeSession = sessions.byName('uptime');
+        uptimes = {};
         values.forEach(function(value) {
             uptimes[value] = uptimeSession.count(value) / 60000;
         });
@@ -83,7 +142,7 @@ function replotReports(elem, reports, sessions) {
         data: values.map(function(value, index) {
             return [index, otherReports.reduce(function(prev, report) {
                 return prev + report.count(value);
-            }, 0) / (sessions ? uptimes[value] : 1)];
+            }, 0) / (uptimes ? uptimes[value] : 1)];
         }),
         report: null,
     }];
@@ -91,16 +150,17 @@ function replotReports(elem, reports, sessions) {
         data.push({
             data: values.map(function(value, index) {
                 return [index, report.count(value) /
-                               (sessions ? uptimes[value] : 1)];
+                               (uptimes ? uptimes[value] : 1)];
             }),
             report: report,
         });
     });
 
     function _tooltip(label, xval, yval, item) {
+        var num = item.series.data[item.dataIndex][1];
         var tip = values[item.dataIndex] + " : " +
-                  item.series.data[item.dataIndex][1].toPrecision(2) +
-                  " reports";
+                  ((!uptimes || num >= 10) ? Math.round(num) : num.toPrecision(2)) +
+                  " report" + (num === 1 ? "" : "s");
         sessions && (tip += " / 1k user-hrs");
         var report = item.series.report;
         if (!report) {
@@ -114,9 +174,9 @@ function replotReports(elem, reports, sessions) {
                 if (!frame.isJava()) {
                     return true;
                 }
-                var line = frame.lineNumber();
+                var line = replaceBrackets(frame.lineNumber());
                 stack += (count ? "<br>" : "") +
-                    frame.functionName() +
+                    replaceBrackets(frame.functionName()) +
                     (line ? " (line " + line + ")" : "");
                 return (++count) < maxStackFrames;
             });
@@ -178,12 +238,23 @@ function replotReports(elem, reports, sessions) {
             onHover: _tooltipHover,
         },
     });
+
+    elem.off("plotclick").on("plotclick", function(event, pos, item) {
+        if (!item || !item.series.report) {
+            return;
+        }
+        var modal = $("#report-modal");
+        fillReportModal(modal,
+            "#" + (topReports - item.seriesIndex + 1) + " hang out of " + reports.length,
+            item.series.report, values[item.dataIndex], sessions);
+        modal.modal("show");
+    });
 }
 
-function replotInfo(elem, reports, sessions, value) {
+function replotInfo(elem, reports, value, sessions) {
     var agg = reports.infoDistribution(value);
 
-    var uptimes;
+    var uptimes = null;
     if (sessions) {
         uptimes = sessions.byName('uptime').infoDistribution(value);
         Object.keys(uptimes).forEach(function(info) {
@@ -207,7 +278,7 @@ function replotInfo(elem, reports, sessions, value) {
         var valuesarray = Object.keys(histogram);
         seriescount = Math.max(seriescount, valuesarray.length);
         valuesarray = valuesarray.map(function(value) {
-            return [value, histogram[value] / (!sessions ? 1 :
+            return [value, histogram[value] / (!uptimes ? 1 :
                            (uptimes[info][value] || uptimes[info]['']))];
         });
         valuesarray.sort(function(val1, val2) {
@@ -258,7 +329,7 @@ function replotInfo(elem, reports, sessions, value) {
     }
 
     function _tooltip(label, xval, yval, item) {
-        return item.series.info[item.dataIndex] + ": " +
+        return replaceBrackets(item.series.info[item.dataIndex]) + " : " +
                Math.round(item.series.data[item.dataIndex][0]) + "%";
     }
     function _tooltipHover(item, tooltip) {
@@ -352,8 +423,10 @@ $("#navbar-groupby").change(function() {
             infodim[0].selectedIndex = 0;
         }
         infodim.change(function() {
-            replotInfo($("#info-plot"), reports, sessions,
-                infodim[0].selectedIndex == 0 ? null : infodim.val());
+            replotInfo($("#info-plot"),
+                       reports,
+                       infodim[0].selectedIndex == 0 ? null : infodim.val(),
+                       sessions);
         });
         (!normalize || sessions) && replot();
     });

@@ -59,13 +59,13 @@
         <div class="row">
           <div class="col-md-6 plot-holder">
             <form class="text-center form-inline">
-              <label>Top reports <span id="report-units"></span></label>
+              <label>Top hangs <span id="report-units"></span></label>
             </form>
             <div id="report-plot" class="plot"></div>
           </div>
           <div class="col-md-6 plot-holder">
             <form class="text-center form-inline">
-              <label>Reports distribution for
+              <label>Distribution for
                 <select id="info-dim-value" class="form-control">
                 </select>
                 <span id="info-dim-name"></span>
@@ -83,6 +83,37 @@
 
     <div id="flotTip" class="tooltip in bottom">
     </div>
+
+    <div id="report-modal" class="modal fade">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close"
+                    data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title"></h4>
+          </div>
+          <div class="modal-body">
+            <div class="panel panel-default">
+              <div class="panel-heading panel-title">
+                Distribution
+              </div>
+              <div class="panel-body small-plot-holder">
+                <div id="report-info-plot" class="plot"></div>
+              </div>
+            </div>
+            <div class="panel-group" id="report-stacks">
+              <div class="panel panel-default hide" id="report-stacks-thread">
+                <div class="panel-heading panel-title"
+                     data-toggle="collapse" data-parent="#report-stacks"></div>
+                <div class="panel-collapse collapse">
+                  <ul class="panel-body list-unstyled"></ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /.modal-content -->
+      </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
 
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="https://code.jquery.com/jquery.js"></script>

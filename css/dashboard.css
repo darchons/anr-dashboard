@@ -8,11 +8,15 @@ body {
     margin-bottom: 10px;
 }
 
+#flotTip {
+    z-index: 2000;
+}
+
 .tooltip.right .tooltip-inner {
     max-width: none;
 }
 
-#anr-plot-stack {
+#report-plot-stack {
     text-align: left;
     margin: 5px;
 }
@@ -25,7 +29,20 @@ body {
     height: 400px;
 }
 
+.small-plot-holder {
+    height: 200px;
+}
+
 .plot {
     width: 100%;
 }
 
+#report-stacks .panel-title {
+    cursor: pointer;
+    padding: 5px;
+}
+
+#report-stacks li {
+    font-family: monospace;
+    font-size: smaller;
+}
