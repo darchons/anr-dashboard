@@ -42,6 +42,10 @@ body {
     padding: 5px;
 }
 
+#report-stacks ul {
+    overflow-x: scroll;
+}
+
 #report-stacks li {
     font-family: monospace;
     font-size: smaller;
