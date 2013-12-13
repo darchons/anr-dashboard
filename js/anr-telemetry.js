@@ -232,16 +232,15 @@ CollectionItem.prototype = {
     infoDistribution: function(dimensionValue) {
         var value = dimensionValue || null;
         if (!this._value_agg[value]) {
+            var agg = {};
             if (value) {
-                this._value_agg[value] = this._telemetry._aggregate(
-                    {}, this._value_histograms[value]);
+                this._telemetry._aggregate(agg, this._value_histograms[value]);
             } else {
-                var agg = {};
                 for (var val in this._value_histograms) {
                     this._telemetry._aggregate(agg, this._value_histograms[val]);
                 }
-                this._value_agg[value] = agg;
             }
+            this._value_agg[value] = agg;
         }
         return this._value_agg[value];
     },
