@@ -62,11 +62,15 @@ function replaceBrackets(str) {
 }
 
 function fillReportModal(modal, rank, report, dimValue, sessions) {
+
+    $("#report-info-plot").prev("i.fa-spinner").fadeIn();
+    modal.find(".spinner-holder").fadeIn();
+
     modal.find(".modal-title").text(rank + " for " + dimValue);
 
     var stacks = $("#report-stacks");
     var template = $("#report-stacks-thread");
-    stacks.children().not(template).remove();
+    stacks.children().not(template).not("i.fa-spinner").remove();
 
     function addThreads(threads, append) {
         var out = $();
@@ -102,14 +106,22 @@ function fillReportModal(modal, rank, report, dimValue, sessions) {
         return out;
     }
 
+    var hideSpinner = 2;
     report.mainThread(function(threads) {
         addThreads(threads, /* append */ false);
+        if (!(--hideSpinner)) {
+            modal.find(".spinner-holder").stop().fadeOut();
+        }
     });
     report.backgroundThreads(function(threads) {
         addThreads(threads, /* append */ true);
+        if (!(--hideSpinner)) {
+            modal.find(".spinner-holder").stop().fadeOut();
+        }
     });
     modal.on("shown.bs.modal", function(event) {
         replotInfo($("#report-info-plot"), report, dimValue, sessions);
+        $("#report-info-plot").prev("i.fa-spinner").stop().fadeOut();
     }).on("hidden.bs.modal", function(event) {
         $.plot($("#report-info-plot"), [[0, 0]], {grid: {show: false}});
     });
@@ -385,6 +397,9 @@ $("#navbar-normalize").prop("checked", false);
 
 $("#navbar-groupby").change(function() {
 
+    $("#report-plot").prev("i.fa-spinner").fadeIn();
+    $("#info-plot").prev("i.fa-spinner").fadeIn();
+
     var repcount = $("#navbar-count").text(0);
     var normbtn = $("#navbar-normalize").off("change");
     var infodim = $("#info-dim-value");
@@ -404,7 +419,8 @@ $("#navbar-groupby").change(function() {
     var sessions = null;
     function replot() {
         replotReports($("#report-plot"), reports, sessions);
-        $("#info-dim-value").trigger("change");
+        $("#report-plot").prev("i.fa-spinner").stop().fadeOut();
+        infodim.trigger("change");
     }
 
     telemetry.reports(val, function(r) {
@@ -427,6 +443,7 @@ $("#navbar-groupby").change(function() {
                        reports,
                        infodim[0].selectedIndex == 0 ? null : infodim.val(),
                        sessions);
+            $("#info-plot").prev("i.fa-spinner").stop().fadeOut();
         });
         (!normalize || sessions) && replot();
     });

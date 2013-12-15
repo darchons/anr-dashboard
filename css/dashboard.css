@@ -27,10 +27,12 @@ body {
 
 .plot-holder {
     height: 400px;
+    position: relative;
 }
 
 .small-plot-holder {
     height: 250px;
+    position: relative;
 }
 
 .plot {
@@ -49,4 +51,22 @@ body {
 #report-stacks li {
     font-family: monospace;
     font-size: smaller;
+}
+
+#report-stacks {
+    position: relative;
+}
+
+.fa-spinner.fa-spin {
+    margin: -15px 0px 0px -15px;
+    font-size: 30px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+}
+
+.spinner-holder {
+    position: relative;
+    height: 30px;
+    margin: 5px;
 }
