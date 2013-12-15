@@ -3,7 +3,7 @@ $(function() {
 "use strict";
 
 var telemetry = null;
-var serverUri = "http://people.mozilla.org/~nchen/anrs/anr-{from}-{to}";
+var serverUri = "//people.mozilla.org/~nchen/anrs/anr-{from}-{to}";
 var defaultDimension = "submission_date";
 
 var maxStackFrames = 10;
