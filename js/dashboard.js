@@ -70,7 +70,7 @@ function fillReportModal(modal, rank, report, dimValue, sessions) {
 
     var stacks = $("#report-stacks");
     var template = $("#report-stacks-thread");
-    stacks.children().not(template).not("i.fa-spinner").remove();
+    stacks.children().not(template).not(".spinner-holder").remove();
 
     function addThreads(threads, append) {
         var out = $();
