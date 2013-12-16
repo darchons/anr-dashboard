@@ -61,12 +61,10 @@ function replaceBrackets(str) {
     return str && str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function fillReportModal(modal, rank, report, dimValue, sessions) {
+function fillReportModal(modal, report, dimValue, sessions) {
 
     $("#report-info-plot").prev("i.fa-spinner").fadeIn();
     modal.find(".spinner-holder i").fadeIn();
-
-    modal.find(".modal-title").text(rank + " for " + dimValue);
 
     var stacks = $("#report-stacks");
     var template = $("#report-stacks-thread");
@@ -256,9 +254,13 @@ function replotReports(elem, reports, sessions) {
             return;
         }
         var modal = $("#report-modal");
-        fillReportModal(modal,
-            "#" + (topReports - item.seriesIndex + 1) + " hang out of " + reports.length,
-            item.series.report, values[item.dataIndex], sessions);
+        var dimValue = values[item.dataIndex];
+        var report = item.series.report;
+        $("#report-modal-rank").text(topReports - item.seriesIndex + 1);
+        $("#report-modal-count").text(reports.length);
+        $("#report-modal-dim").text(dimValue);
+        $("#report-modal-id").text(report.name());
+        fillReportModal(modal, report, dimValue, sessions);
         modal.modal("show");
     });
 }
