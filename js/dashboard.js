@@ -64,7 +64,7 @@ function replaceBrackets(str) {
 function fillReportModal(modal, rank, report, dimValue, sessions) {
 
     $("#report-info-plot").prev("i.fa-spinner").fadeIn();
-    modal.find(".spinner-holder").fadeIn();
+    modal.find(".spinner-holder i").fadeIn();
 
     modal.find(".modal-title").text(rank + " for " + dimValue);
 
@@ -110,13 +110,13 @@ function fillReportModal(modal, rank, report, dimValue, sessions) {
     report.mainThread(function(threads) {
         addThreads(threads, /* append */ false);
         if (!(--hideSpinner)) {
-            modal.find(".spinner-holder").stop().fadeOut();
+            modal.find(".spinner-holder i").stop().fadeOut();
         }
     });
     report.backgroundThreads(function(threads) {
         addThreads(threads, /* append */ true);
         if (!(--hideSpinner)) {
-            modal.find(".spinner-holder").stop().fadeOut();
+            modal.find(".spinner-holder i").stop().fadeOut();
         }
     });
     modal.on("shown.bs.modal", function(event) {
