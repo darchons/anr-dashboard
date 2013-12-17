@@ -61,12 +61,10 @@ function replaceBrackets(str) {
     return str && str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function fillReportModal(modal, rank, report, dimValue, sessions) {
+function fillReportModal(modal, report, dimValue, sessions) {
 
     $("#report-info-plot").prev("i.fa-spinner").fadeIn();
-    modal.find(".spinner-holder").fadeIn();
-
-    modal.find(".modal-title").text(rank + " for " + dimValue);
+    modal.find(".spinner-holder i").fadeIn();
 
     var stacks = $("#report-stacks");
     var template = $("#report-stacks-thread");
@@ -110,13 +108,13 @@ function fillReportModal(modal, rank, report, dimValue, sessions) {
     report.mainThread(function(threads) {
         addThreads(threads, /* append */ false);
         if (!(--hideSpinner)) {
-            modal.find(".spinner-holder").stop().fadeOut();
+            modal.find(".spinner-holder i").stop().fadeOut();
         }
     });
     report.backgroundThreads(function(threads) {
         addThreads(threads, /* append */ true);
         if (!(--hideSpinner)) {
-            modal.find(".spinner-holder").stop().fadeOut();
+            modal.find(".spinner-holder i").stop().fadeOut();
         }
     });
     modal.on("shown.bs.modal", function(event) {
@@ -256,9 +254,13 @@ function replotReports(elem, reports, sessions) {
             return;
         }
         var modal = $("#report-modal");
-        fillReportModal(modal,
-            "#" + (topReports - item.seriesIndex + 1) + " hang out of " + reports.length,
-            item.series.report, values[item.dataIndex], sessions);
+        var dimValue = values[item.dataIndex];
+        var report = item.series.report;
+        $("#report-modal-rank").text(topReports - item.seriesIndex + 1);
+        $("#report-modal-count").text(reports.length);
+        $("#report-modal-dim").text(dimValue);
+        $("#report-modal-id").text(report.name());
+        fillReportModal(modal, report, dimValue, sessions);
         modal.modal("show");
     });
 }
@@ -396,10 +398,6 @@ function replotInfo(elem, reports, value, sessions) {
 $("#navbar-normalize").prop("checked", false);
 
 $("#navbar-groupby").change(function() {
-
-    $("#report-plot").prev("i.fa-spinner").fadeIn();
-    $("#info-plot").prev("i.fa-spinner").fadeIn();
-
     var repcount = $("#navbar-count").text(0);
     var normbtn = $("#navbar-normalize").off("change");
     var infodim = $("#info-dim-value");
@@ -449,6 +447,9 @@ $("#navbar-groupby").change(function() {
     });
 
     normbtn.change(function() {
+        $("#report-plot").prev("i.fa-spinner").fadeIn();
+        $("#info-plot").prev("i.fa-spinner").fadeIn();
+
         normalize = normbtn.prop("checked");
         if (normalize) {
             telemetry.sessions(val, function(s) {
