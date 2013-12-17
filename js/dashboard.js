@@ -398,10 +398,6 @@ function replotInfo(elem, reports, value, sessions) {
 $("#navbar-normalize").prop("checked", false);
 
 $("#navbar-groupby").change(function() {
-
-    $("#report-plot").prev("i.fa-spinner").fadeIn();
-    $("#info-plot").prev("i.fa-spinner").fadeIn();
-
     var repcount = $("#navbar-count").text(0);
     var normbtn = $("#navbar-normalize").off("change");
     var infodim = $("#info-dim-value");
@@ -451,6 +447,9 @@ $("#navbar-groupby").change(function() {
     });
 
     normbtn.change(function() {
+        $("#report-plot").prev("i.fa-spinner").fadeIn();
+        $("#info-plot").prev("i.fa-spinner").fadeIn();
+
         normalize = normbtn.prop("checked");
         if (normalize) {
             telemetry.sessions(val, function(s) {
