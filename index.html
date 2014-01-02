@@ -138,5 +138,10 @@
 
     <script src="js/hang-telemetry.js"></script>
     <script src="js/dashboard.js"></script>
+    <script>
+      $(function() {
+        var dashboard = new Dashboard("http://people.mozilla.org/~nchen/anrs/anr-{from}-{to}");
+      });
+    </script>
   </body>
 </html>
