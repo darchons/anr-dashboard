@@ -2,10 +2,10 @@
 
 "use strict";
 
-function ANRTelemetry() {
+function HangTelemetry() {
 }
 
-ANRTelemetry.prototype = {
+HangTelemetry.prototype = {
 
     _get: function(file, cb) {
         var xhr = new XMLHttpRequest();
@@ -14,7 +14,7 @@ ANRTelemetry.prototype = {
             cb(JSON.parse(xhr.responseText));
         };
         xhr.onerror = function(e) {
-            throw new Error("ANRTelemetry: failed to retrieve file.");
+            throw new Error("HangTelemetry: failed to retrieve file.");
         };
         xhr.send(null);
     },
@@ -42,7 +42,7 @@ ANRTelemetry.prototype = {
     _getCollection: function(dim, obj, data, cache, cb) {
         if (!this.index.dimensions[dim] ||
             !data[dim]) {
-            throw new Error("ANRTelemetry: invalid dimension.");
+            throw new Error("HangTelemetry: invalid dimension.");
         }
         var self = this;
         function _getCached() {
@@ -326,6 +326,6 @@ StackFrame.prototype = {
     },
 };
 
-exports.ANRTelemetry = ANRTelemetry;
+exports.HangTelemetry = HangTelemetry;
 
 })(this);

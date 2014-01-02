@@ -483,7 +483,7 @@ $("#navbar-from").change(function() {
     var oldgroupby = groupby.val();
     groupby.empty();
 
-    telemetry = new ANRTelemetry();
+    telemetry = new HangTelemetry();
     telemetry.init(uri, function() {
         var dims = telemetry.dimensions();
         dims.sort(smartSort);
