@@ -181,7 +181,7 @@ function replotReports(elem, reports, sessions) {
             var stack = "<hr>";
             var count = 0;
             threads[0].stack().every(function(frame, index) {
-                if (!frame.isJava()) {
+                if (frame.isNative()) {
                     return true;
                 }
                 var line = replaceBrackets(frame.lineNumber());

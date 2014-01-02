@@ -299,11 +299,17 @@ StackFrame.prototype = {
         return this._components[0] === "j";
     },
 
+    isPseudo: function() {
+        return this._components[0] === "p";
+    },
+
     functionName: function() {
         if (this.isJava()) {
             return this._components[1];
         } else if (this.isNative()) {
             return this._components[2];
+        } else if (this.isPseudo()) {
+            return this._components[1];
         }
     },
 
