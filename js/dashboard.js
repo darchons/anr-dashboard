@@ -5,7 +5,7 @@ exports.Dashboard = function (serverUri) {
 "use strict";
 
 var telemetry = null;
-var defaultDimension = "submission_date";
+var defaultDimension = "appName";
 
 var maxStackFrames = 10;
 var topReports = 10;
