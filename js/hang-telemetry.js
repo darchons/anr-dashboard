@@ -88,8 +88,20 @@ HangTelemetry.prototype = {
     },
 
     _backgroundThreads: function(key, cb) {
+        if (!this.index.background_threads) {
+            return cb([]);
+        }
         this._getThreads("backgroundThreads", key,
             this.index.background_threads, this._threads, cb);
+    },
+
+    _sumCount: function(count) {
+        if (typeof count === "number") {
+            return count;
+        }
+        return Object.keys(count).reduce(function(prev, key) {
+            return prev + count[key];
+        }, 0);
     },
 
     _aggregate: function(agg, histograms) {
@@ -98,7 +110,7 @@ HangTelemetry.prototype = {
             var histogram = histograms[info];
             for (var value in histogram) {
                 agg_histogram[value] =
-                    (agg_histogram[value] || 0) + histogram[value];
+                    (agg_histogram[value] || 0) + this._sumCount(histogram[value]);
             }
             agg[info] = agg_histogram;
         }
@@ -110,7 +122,7 @@ HangTelemetry.prototype = {
             var count = 0;
             var histogram = histograms[info];
             for (var value in histogram) {
-                count += histogram[value];
+                count += this._sumCount(histogram[value]);
             }
             max = Math.max(max, count);
         }
