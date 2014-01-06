@@ -2,10 +2,10 @@
 
 "use strict";
 
-function ANRTelemetry() {
+function HangTelemetry() {
 }
 
-ANRTelemetry.prototype = {
+HangTelemetry.prototype = {
 
     _get: function(file, cb) {
         var xhr = new XMLHttpRequest();
@@ -14,7 +14,7 @@ ANRTelemetry.prototype = {
             cb(JSON.parse(xhr.responseText));
         };
         xhr.onerror = function(e) {
-            throw new Error("ANRTelemetry: failed to retrieve file.");
+            throw new Error("HangTelemetry: failed to retrieve file.");
         };
         xhr.send(null);
     },
@@ -42,7 +42,7 @@ ANRTelemetry.prototype = {
     _getCollection: function(dim, obj, data, cache, cb) {
         if (!this.index.dimensions[dim] ||
             !data[dim]) {
-            throw new Error("ANRTelemetry: invalid dimension.");
+            throw new Error("HangTelemetry: invalid dimension.");
         }
         var self = this;
         function _getCached() {
@@ -88,8 +88,20 @@ ANRTelemetry.prototype = {
     },
 
     _backgroundThreads: function(key, cb) {
+        if (!this.index.background_threads) {
+            return cb([]);
+        }
         this._getThreads("backgroundThreads", key,
             this.index.background_threads, this._threads, cb);
+    },
+
+    _sumCount: function(count) {
+        if (typeof count === "number") {
+            return count;
+        }
+        return Object.keys(count).reduce(function(prev, key) {
+            return prev + count[key];
+        }, 0);
     },
 
     _aggregate: function(agg, histograms) {
@@ -98,7 +110,7 @@ ANRTelemetry.prototype = {
             var histogram = histograms[info];
             for (var value in histogram) {
                 agg_histogram[value] =
-                    (agg_histogram[value] || 0) + histogram[value];
+                    (agg_histogram[value] || 0) + this._sumCount(histogram[value]);
             }
             agg[info] = agg_histogram;
         }
@@ -110,7 +122,7 @@ ANRTelemetry.prototype = {
             var count = 0;
             var histogram = histograms[info];
             for (var value in histogram) {
-                count += histogram[value];
+                count += this._sumCount(histogram[value]);
             }
             max = Math.max(max, count);
         }
@@ -299,11 +311,17 @@ StackFrame.prototype = {
         return this._components[0] === "j";
     },
 
+    isPseudo: function() {
+        return this._components[0] === "p";
+    },
+
     functionName: function() {
         if (this.isJava()) {
             return this._components[1];
         } else if (this.isNative()) {
             return this._components[2];
+        } else if (this.isPseudo()) {
+            return this._components[1];
         }
     },
 
@@ -320,6 +338,6 @@ StackFrame.prototype = {
     },
 };
 
-exports.ANRTelemetry = ANRTelemetry;
+exports.HangTelemetry = HangTelemetry;
 
 })(this);

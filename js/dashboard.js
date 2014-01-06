@@ -1,10 +1,11 @@
-$(function() {
+(function(exports) {
+
+exports.Dashboard = function (serverUri) {
 
 "use strict";
 
 var telemetry = null;
-var serverUri = "//people.mozilla.org/~nchen/anrs/anr-{from}-{to}";
-var defaultDimension = "submission_date";
+var defaultDimension = "appName";
 
 var maxStackFrames = 10;
 var topReports = 10;
@@ -181,7 +182,7 @@ function replotReports(elem, reports, sessions) {
             var stack = "<hr>";
             var count = 0;
             threads[0].stack().every(function(frame, index) {
-                if (!frame.isJava()) {
+                if (frame.isNative()) {
                     return true;
                 }
                 var line = replaceBrackets(frame.lineNumber());
@@ -483,7 +484,7 @@ $("#navbar-from").change(function() {
     var oldgroupby = groupby.val();
     groupby.empty();
 
-    telemetry = new ANRTelemetry();
+    telemetry = new HangTelemetry();
     telemetry.init(uri, function() {
         var dims = telemetry.dimensions();
         dims.sort(smartSort);
@@ -496,4 +497,6 @@ $("#navbar-from").change(function() {
     });
 }).trigger("change");
 
-});
+};
+
+})(this);
