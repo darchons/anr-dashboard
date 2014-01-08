@@ -499,15 +499,20 @@ function replotActivities(elem, activities, value, options) {
     function _tooltip(label, xval, yval, item) {
         var at = (item.series.data[item.dataIndex][1] /
             item.series.info.sum * 100).toPrecision(3);
+        var below = (item.series.data.slice(0, item.dataIndex).reduce(
+                function(prev, d) prev + d[1], 0) /
+            item.series.info.sum * 100).toPrecision(3);
         var above = (item.series.data.slice(item.dataIndex + 1).reduce(
                 function(prev, d) prev + d[1], 0) /
             item.series.info.sum * 100).toPrecision(3);
-        var prevtime = (item.dataIndex === 0 ? "&lt;" :
-            smartTime(item.series.data[item.dataIndex - 1][0] / 1000) + " to ");
+        var prevtime = (item.dataIndex === 0 ? "" :
+            smartTime(item.series.data[item.dataIndex - 1][0] / 1000));
         var time = smartTime(item.series.data[item.dataIndex][0] / 1000);
         return (options.noname ? "" : item.series.label + "<br>") +
-            prevtime + time + ": " + at + "%<br>&gt;" +
-            time + ": " + above + "%";
+            (item.dataIndex === 0 ? "&lt;" + time + ": " + at + "%<br>"
+                                  : prevtime + "-" + time + ": " + at + "%<br>" +
+                                    "&lt;" + prevtime + ": " + below + "%<br>") +
+            "&gt;" + time + ": " + above + "%";
     }
     function _tooltipHover(item, tooltip) {
         var baroffset = plotobj.pointOffset({
