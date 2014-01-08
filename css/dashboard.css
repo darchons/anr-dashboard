@@ -1,6 +1,11 @@
 
 body {
-    margin: 2em auto;
+    margin: 90px auto 2em auto;
+}
+
+.navbar-fixed-top.container {
+    border: 14px solid white;
+    border-bottom: 8px solid white;
 }
 
 .navbar-form {
