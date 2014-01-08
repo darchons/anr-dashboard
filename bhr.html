@@ -115,11 +115,30 @@
             </h4>
           </div>
           <div class="modal-body">
-            <div class="panel panel-default">
-              <div class="panel-heading panel-title">Distribution</div>
-              <div class="panel-body small-plot-holder">
-                <i class="fa fa-spinner fa-spin"></i>
-                <div id="report-info-plot" class="plot"></div>
+            <div class="panel-group" id="report-plots">
+              <div class="panel panel-default">
+                <div class="panel-heading panel-title" data-toggle="collapse"
+                     data-parent="#report-plots" data-target="#report-plots-info">
+                  Distribution
+                </div>
+                <div id="report-plots-info" class="panel-collapse collapse in">
+                  <div class="panel-body small-plot-holder">
+                    <i class="fa fa-spinner fa-spin"></i>
+                    <div id="report-info-plot" class="plot"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="panel panel-default">
+                <div class="panel-heading panel-title" data-toggle="collapse"
+                     data-parent="#report-plots" data-target="#report-plots-activity">
+                  Hang times
+                </div>
+                <div id="report-plots-activity" class="panel-collapse collapse">
+                  <div class="panel-body small-plot-holder">
+                    <i class="fa fa-spinner fa-spin"></i>
+                    <div id="report-activity-plot" class="plot"></div>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="panel-group" id="report-stacks">

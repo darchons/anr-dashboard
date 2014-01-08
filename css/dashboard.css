@@ -16,9 +16,9 @@ body {
     max-width: none;
 }
 
-#report-plot-stack {
+#report-plots {
     text-align: left;
-    margin: 5px;
+    margin-bottom: 10px;
 }
 
 .tooltip hr {
@@ -39,7 +39,7 @@ body {
     width: 100%;
 }
 
-#report-stacks .panel-title {
+#report-stacks .panel-title, #report-plots .panel-title {
     cursor: pointer;
     padding: 5px;
 }

@@ -85,7 +85,14 @@ function replaceBrackets(str) {
 
 function fillReportModal(modal, report, dimValue, sessions) {
 
-    $("#report-info-plot").prev("i.fa-spinner").fadeIn();
+    var infoPlot = $("#report-info-plot");
+    var infoPlotted = false;
+    infoPlot.prev("i.fa-spinner").fadeIn();
+    var activityPlot = $("#report-activity-plot");
+    var activityPlotted = false;
+    if (activityPlot.length) {
+        activityPlot.prev("i.fa-spinner").fadeIn();
+    }
     modal.find(".spinner-holder i").fadeIn();
 
     var stacks = $("#report-stacks");
@@ -139,11 +146,24 @@ function fillReportModal(modal, report, dimValue, sessions) {
             modal.find(".spinner-holder i").stop().fadeOut();
         }
     });
-    modal.on("shown.bs.modal", function(event) {
-        replotInfo($("#report-info-plot"), report, dimValue, sessions);
-        $("#report-info-plot").prev("i.fa-spinner").stop().fadeOut();
-    }).on("hidden.bs.modal", function(event) {
-        $.plot($("#report-info-plot"), [[0, 0]], {grid: {show: false}});
+    function _plot() {
+        if (!infoPlotted && $("#report-plots-info").hasClass("in")) {
+            replotInfo(infoPlot, report, dimValue, sessions);
+            infoPlot.prev("i.fa-spinner").stop().fadeOut();
+            infoPlotted = true;
+        }
+        if (activityPlot.length &&
+            !activityPlotted && $("#report-plots-activity").hasClass("in")) {
+            replotActivities(activityPlot, [report], dimValue, {noname: true});
+            activityPlot.prev("i.fa-spinner").stop().fadeOut();
+            activityPlotted = true;
+        }
+    }
+    $("#report-plots-info").on("shown.bs.collapse", _plot);
+    $("#report-plots-activity").on("shown.bs.collapse", _plot);
+    modal.on("shown.bs.modal", _plot).on("hidden.bs.modal", function(event) {
+        $.plot(infoPlot, [[0, 0]], {grid: {show: false}});
+        $.plot(activityPlot, [[0, 0]], {grid: {show: true}});
     });
 }
 
@@ -421,7 +441,8 @@ function replotInfo(elem, reports, value, sessions) {
     });
 }
 
-function replotActivities(elem, activities, value) {
+function replotActivities(elem, activities, value, options) {
+    options = options || {};
     var times = [];
     for (var i = 2; i < 4294967296; i *= 2) {
         times.push(i - 1);
@@ -440,7 +461,7 @@ function replotActivities(elem, activities, value) {
         var name = act.name();
         var count = act.rawCount(value);
         return {
-            label: name.substring(name.indexOf(":") + 1),
+            label: options.noname ? undefined : name.substring(name.indexOf(":") + 1),
             data: times.filter(function(t) t >= endtimes.min && t <= endtimes.max)
                        .map(function(t) [t, count[t] || 0]),
             info: {
@@ -484,7 +505,7 @@ function replotActivities(elem, activities, value) {
         var prevtime = (item.dataIndex === 0 ? "&lt;" :
             smartTime(item.series.data[item.dataIndex - 1][0] / 1000) + " to ");
         var time = smartTime(item.series.data[item.dataIndex][0] / 1000);
-        return item.series.label + "<br>" +
+        return (options.noname ? "" : item.series.label + "<br>") +
             prevtime + time + ": " + at + "%<br>&gt;" +
             time + ": " + above + "%";
     }
