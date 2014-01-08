@@ -426,8 +426,13 @@ function replotActivities(elem, activities, value) {
     for (var i = 2; i < 4294967296; i *= 2) {
         times.push(i - 1);
     }
-    var maxtime = +activities.reduce(function(prev, act)
-        Math.max(prev, Math.max.apply(Math, Object.keys(act.rawCount(null)))), 0);
+    var endtimes = activities.reduce(function(prev, act) {
+        var alltimes = Object.keys(act.rawCount(null));
+        return {
+            min: Math.min(prev.min, Math.min.apply(Math, alltimes)),
+            max: Math.max(prev.max, Math.max.apply(Math, alltimes)),
+        };
+    }, {min: times[times.length - 1], max: times[0]});
     var plotdata = activities.map(function(act) {
         if (!act.hasDimensionValue(value)) {
             return {};
@@ -436,7 +441,7 @@ function replotActivities(elem, activities, value) {
         var count = act.rawCount(value);
         return {
             label: name.substring(name.indexOf(":") + 1),
-            data: times.filter(function(t) t <= maxtime)
+            data: times.filter(function(t) t >= endtimes.min && t <= endtimes.max)
                        .map(function(t) [t, count[t] || 0]),
             info: {
                 sum: Object.keys(count).reduce(function(prev, t) prev + count[t], 0),
