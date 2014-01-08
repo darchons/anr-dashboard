@@ -191,7 +191,8 @@ function replotReports(elem, reports, sessions) {
     function _tooltip(label, xval, yval, item) {
         var num = item.series.data[item.dataIndex][1];
         var tip = values[item.dataIndex] + " : " +
-                  ((!uptimes || num >= 10) ? Math.round(num) : num.toPrecision(2)) +
+                  ((!uptimes || num >= 10) ? smartPrefix(Math.round(num))
+                                           : num.toPrecision(2)) +
                   " hang" + (num === 1 ? "" : "s");
         sessions && (tip += " / 1k user-hrs");
         var report = item.series.report;
@@ -262,6 +263,9 @@ function replotReports(elem, reports, sessions) {
             ticks: values.map(function(value, index) {
                 return [index, value];
             }),
+        },
+        yaxis: {
+            tickFormatter: smartPrefix,
         },
         colors: reportColors,
         tooltip: true,
@@ -567,7 +571,7 @@ $("#navbar-groupby").change(function() {
 
     telemetry.reports(val, function(r) {
         reports = r;
-        repcount.text(reports.cumulativeCount());
+        repcount.text(smartPrefix(reports.cumulativeCount()));
 
         var values = reports.dimensionValues();
         values.sort(smartSort);
