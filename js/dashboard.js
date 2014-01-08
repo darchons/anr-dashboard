@@ -467,13 +467,17 @@ function replotActivities(elem, activities, value) {
     }
 
     function _tooltip(label, xval, yval, item) {
-        var percentage = (item.series.data[item.dataIndex][1] /
+        var at = (item.series.data[item.dataIndex][1] /
             item.series.info.sum * 100).toPrecision(3);
-        var prevtime = (item.dataIndex === 0 ? "<" :
+        var above = (item.series.data.slice(item.dataIndex + 1).reduce(
+                function(prev, d) prev + d[1], 0) /
+            item.series.info.sum * 100).toPrecision(3);
+        var prevtime = (item.dataIndex === 0 ? "&lt;" :
             smartTime(item.series.data[item.dataIndex - 1][0] / 1000) + " to ");
-        return item.series.label + "<br>" + prevtime +
-            smartTime(item.series.data[item.dataIndex][0] / 1000) +
-            ": " + percentage + "%";
+        var time = smartTime(item.series.data[item.dataIndex][0] / 1000);
+        return item.series.label + "<br>" +
+            prevtime + time + ": " + at + "%<br>&gt;" +
+            time + ": " + above + "%";
     }
     function _tooltipHover(item, tooltip) {
         var baroffset = plotobj.pointOffset({
