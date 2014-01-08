@@ -104,27 +104,42 @@ HangTelemetry.prototype = {
         }, 0);
     },
 
+    _mergeCount: function(dest, src) {
+        if (typeof src === "number") {
+            return (dest || 0) + src;
+        }
+        dest = dest || {};
+        for (var key in src) {
+            dest[key] = (dest[key] || 0) + src[key];
+        }
+        return dest;
+    },
+
     _aggregate: function(agg, histograms) {
         for (var info in histograms) {
             var agg_histogram = agg[info] || {};
             var histogram = histograms[info];
             for (var value in histogram) {
-                agg_histogram[value] =
-                    (agg_histogram[value] || 0) + this._sumCount(histogram[value]);
+                agg_histogram[value] = (agg_histogram[value] || 0) +
+                    this._sumCount(histogram[value]);
             }
             agg[info] = agg_histogram;
         }
     },
 
     _countHistograms: function(histograms) {
-        var max = 0;
+        var max = 0, maxSum = 0;
         for (var info in histograms) {
             var count = 0;
             var histogram = histograms[info];
             for (var value in histogram) {
-                count += this._sumCount(histogram[value]);
+                count = this._mergeCount(count, histogram[value]);
             }
-            max = Math.max(max, count);
+            var sum = this._sumCount(count);
+            if (sum > maxSum) {
+                maxSum = sum;
+                max = count;
+            }
         }
         return max;
     },
@@ -173,9 +188,13 @@ Collection.prototype = {
         return Object.keys(this._content).length;
     },
 
-    all: function() {
+    all: function(filter) {
         var self = this;
-        return Object.keys(this._content).map(function(name) {
+        var names = Object.keys(this._content);
+        if (filter) {
+            names = names.filter(filter);
+        }
+        return names.map(function(name) {
             return new self._obj(self._telemetry, name, self._content[name]);
         });
     },
@@ -222,7 +241,11 @@ CollectionItem.prototype = {
         return this._name;
     },
 
-    count: function(dimensionValue) {
+    hasDimensionValue: function(dimensionValue) {
+        return !dimensionValue || dimensionValue in this._value_histograms;
+    },
+
+    rawCount: function(dimensionValue) {
         var value = dimensionValue || null;
         if (!this._value_count[value]) {
             if (value) {
@@ -232,13 +255,17 @@ CollectionItem.prototype = {
             } else {
                 var count = 0;
                 for (var val in this._value_histograms) {
-                    count += this._telemetry._countHistograms(
-                        this._value_histograms[val]);
+                    count = this._telemetry._mergeCount(count,
+                        this._telemetry._countHistograms(this._value_histograms[val]));
                 }
                 this._value_count[value] = count;
             }
         }
         return this._value_count[value];
+    },
+
+    count: function(dimensionValue) {
+        return this._telemetry._sumCount(this.rawCount(dimensionValue));
     },
 
     infoDistribution: function(dimensionValue) {
