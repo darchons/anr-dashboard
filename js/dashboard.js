@@ -58,13 +58,44 @@ function revSmartSort(str1, str2) {
     return -smartSort(str1, str2);
 }
 
+function _smartUnits(values, names, precisions) {
+    return function(value) {
+        for (var i = 0; i < values.length; i++) {
+            if (value < values[i]) {
+                continue;
+            }
+            return (value / values[i]).toPrecision(
+                precisions[Math.min(precisions.length - 1, i)]) + names[i];
+        }
+        return value.toPrecision(precisions[precisions.length - 1]);
+    };
+}
+var smartPrefix = _smartUnits(
+    [1e15, 1e12, 1e9, 1e6, 1e3, 1, 1e-3, 1e-6, 1e-9, 1e-12, 1e-15],
+    ['E', 'T', 'G', 'M', 'k', '', 'm', 'μ', 'n', 'p', 'f', ''],
+    [3]);
+var smartTime = _smartUnits(
+    [31556952, 604800, 86400, 3600, 60, 1, 1e-3, 1e-6, 1e-9, 1e-12],
+    ['y', 'w', 'd', 'h', 'm', 's', 'ms', 'μs', 'ns', 'ps', ''],
+    [2, 2, 2, 2, 2, 2, 3]);
+function smartPercent(v) {
+    return (v * 100).toPrecision(3) + "%";
+}
+
 function replaceBrackets(str) {
     return str && str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function fillReportModal(modal, report, dimValue, sessions) {
-
-    $("#report-info-plot").prev("i.fa-spinner").fadeIn();
+function fillReportModal(modal, report, dimValue, sessions, options) {
+    options = options || {};
+    var infoPlot = $("#report-info-plot");
+    var infoPlotted = false;
+    infoPlot.prev("i.fa-spinner").fadeIn();
+    var activityPlot = $("#report-activity-plot");
+    var activityPlotted = false;
+    if (activityPlot.length) {
+        activityPlot.prev("i.fa-spinner").fadeIn();
+    }
     modal.find(".spinner-holder i").fadeIn();
 
     var stacks = $("#report-stacks");
@@ -118,19 +149,34 @@ function fillReportModal(modal, report, dimValue, sessions) {
             modal.find(".spinner-holder i").stop().fadeOut();
         }
     });
-    modal.on("shown.bs.modal", function(event) {
-        replotInfo($("#report-info-plot"), report, dimValue, sessions);
-        $("#report-info-plot").prev("i.fa-spinner").stop().fadeOut();
-    }).on("hidden.bs.modal", function(event) {
-        $.plot($("#report-info-plot"), [[0, 0]], {grid: {show: false}});
+    function _plot() {
+        if (!infoPlotted && $("#report-plots-info").hasClass("in")) {
+            replotInfo(infoPlot, report, dimValue, sessions, options);
+            infoPlot.prev("i.fa-spinner").stop().fadeOut();
+            infoPlotted = true;
+        }
+        if (activityPlot.length &&
+            !activityPlotted && $("#report-plots-activity").hasClass("in")) {
+            replotActivities(activityPlot, [report], dimValue,
+                             $.extend({noname: true}, options));
+            activityPlot.prev("i.fa-spinner").stop().fadeOut();
+            activityPlotted = true;
+        }
+    }
+    $("#report-plots-info").on("shown.bs.collapse", _plot);
+    $("#report-plots-activity").on("shown.bs.collapse", _plot);
+    modal.on("shown.bs.modal", _plot).on("hidden.bs.modal", function(event) {
+        $.plot(infoPlot, [[0, 0]], {grid: {show: false}});
+        $.plot(activityPlot, [[0, 0]], {grid: {show: true}});
     });
 }
 
-function replotReports(elem, reports, sessions) {
+function replotReports(elem, reports, sessions, options) {
     var values = reports.dimensionValues();
+    options = options || {};
 
     var uptimes = null;
-    if (sessions) {
+    if (options.normalize) {
         var uptimeSession = sessions.byName('uptime');
         uptimes = {};
         values.forEach(function(value) {
@@ -170,9 +216,10 @@ function replotReports(elem, reports, sessions) {
     function _tooltip(label, xval, yval, item) {
         var num = item.series.data[item.dataIndex][1];
         var tip = values[item.dataIndex] + " : " +
-                  ((!uptimes || num >= 10) ? Math.round(num) : num.toPrecision(2)) +
-                  " report" + (num === 1 ? "" : "s");
-        sessions && (tip += " / 1k user-hrs");
+                  ((!uptimes || num >= 10) ? smartPrefix(Math.round(num))
+                                           : num.toPrecision(2)) +
+                  " hang" + (num === 1 ? "" : "s");
+        options.normalize && (tip += " / 1k user-hrs");
         var report = item.series.report;
         if (!report) {
             return tip;
@@ -213,7 +260,7 @@ function replotReports(elem, reports, sessions) {
             y: (item.datapoint[1] + item.datapoint[2]) / 2,
         });
         var plotoffset = elem.offset();
-        tooltip.removeClass("bottom").addClass("right")
+        tooltip.removeClass("top bottom left").addClass("right")
         .html(
             "<div class='tooltip-inner'>" + tooltip.html() + "</div>" +
             "<div class='tooltip-arrow'></div>")
@@ -242,6 +289,9 @@ function replotReports(elem, reports, sessions) {
                 return [index, value];
             }),
         },
+        yaxis: {
+            tickFormatter: smartPrefix,
+        },
         colors: reportColors,
         tooltip: true,
         tooltipOpts: {
@@ -261,16 +311,17 @@ function replotReports(elem, reports, sessions) {
         $("#report-modal-count").text(reports.length);
         $("#report-modal-dim").text(dimValue);
         $("#report-modal-id").text(report.name());
-        fillReportModal(modal, report, dimValue, sessions);
+        fillReportModal(modal, report, dimValue, sessions, options);
         modal.modal("show");
     });
 }
 
-function replotInfo(elem, reports, value, sessions) {
+function replotInfo(elem, reports, value, sessions, options) {
     var agg = reports.infoDistribution(value);
+    options = options || {};
 
     var uptimes = null;
-    if (sessions) {
+    if (options.normalize) {
         uptimes = sessions.byName('uptime').infoDistribution(value);
         Object.keys(uptimes).forEach(function(info) {
             var uptime = uptimes[info];
@@ -353,7 +404,7 @@ function replotInfo(elem, reports, value, sessions) {
             y: item.datapoint[1] - 0.5,
         });
         var plotoffset = elem.offset();
-        tooltip.removeClass("right").addClass("bottom")
+        tooltip.removeClass("top right left").addClass("bottom")
         .html(
             "<div class='tooltip-inner'>" + tooltip.html() + "</div>" +
             "<div class='tooltip-arrow'></div>")
@@ -396,6 +447,139 @@ function replotInfo(elem, reports, value, sessions) {
     });
 }
 
+function replotActivities(elem, activities, value, options) {
+    options = options || {};
+    var times = [];
+    for (var i = 2; i < 4294967296; i *= 2) {
+        times.push(i - 1);
+    }
+    var minratio = 1;
+    var endtimes = activities.reduce(function(prev, act) {
+        var count = act.rawCount(null);
+        var alltimes = Object.keys(count);
+        if (options.normalize) {
+            minratio = Math.min(minratio, 1 / alltimes.reduce(
+                function(prev, t) prev + count[t], 0));
+        }
+        return {
+            min: Math.min(prev.min, Math.min.apply(Math, alltimes)),
+            max: Math.max(prev.max, Math.max.apply(Math, alltimes)),
+        };
+    }, {min: times[times.length - 1], max: times[0]});
+    var plotdata = activities.map(function(act) {
+        if (!act.hasDimensionValue(value)) {
+            return {};
+        }
+        var name = act.name();
+        var count = act.rawCount(value);
+        var ratio = !options.normalize ? 1 :
+            1 / Object.keys(count).reduce(function(prev, t) prev + count[t], 0);
+        return {
+            label: options.noname ? undefined : name.substring(name.indexOf(":") + 1),
+            data: times.filter(function(t) t >= endtimes.min && t <= endtimes.max)
+                       .map(function(t) [t, (count[t] || 0) * ratio]),
+        };
+    });
+    minratio = 1 - Math.ceil(Math.log(minratio) / Math.LN10);
+
+    function _xTransform(v) {
+        return Math.log(v) / Math.LN2;
+    }
+    function _xInvTransform(v) {
+        return Math.pow(2, v);
+    }
+
+    function _yTransform(v) {
+        return Math.max(0, minratio + Math.log(v) / Math.LN10);
+    }
+    function _yInvTransform(v) {
+        return Math.pow(10, v - minratio);
+    }
+
+    function _getTicks(logbase, label, startexp, maxticks) {
+        return function(axis) {
+            var end = Math.ceil(Math.log(axis.max) / logbase);
+            var ret = [[0, label(0)]];
+            var step = Math.ceil((end - startexp + 1) / maxticks);
+            for (var i = startexp; i <= end; i += step) {
+                var val = Math.exp(logbase * i);
+                ret.push([val, label(val)]);
+            }
+            return ret;
+        };
+    }
+
+    function _tooltip(label, xval, yval, item) {
+        var labelFn = options.normalize ? smartPercent : smartPrefix;
+        var at = labelFn(item.series.data[item.dataIndex][1]);
+        var below = labelFn(item.series.data.slice(0, item.dataIndex).reduce(
+                function(prev, d) prev + d[1], 0));
+        var above = labelFn(item.series.data.slice(item.dataIndex + 1).reduce(
+                function(prev, d) prev + d[1], 0));
+        var prevtime = (item.dataIndex === 0 ? "" :
+            smartTime(item.series.data[item.dataIndex - 1][0] / 1000));
+        var time = smartTime(item.series.data[item.dataIndex][0] / 1000);
+        return (options.noname ? "" : item.series.label + "<br>") +
+            (item.dataIndex === 0 ? "&lt;" + time + ": " + at + "<br>"
+                                  : prevtime + "-" + time + ": " + at + "<br>" +
+                                    "&lt;" + prevtime + ": " + below + "<br>") +
+            "&gt;" + time + ": " + above;
+    }
+    function _tooltipHover(item, tooltip) {
+        var baroffset = plotobj.pointOffset({
+            x: item.datapoint[0],
+            y: item.datapoint[1],
+        });
+        var plotoffset = elem.offset();
+        tooltip.removeClass("right bottom left").addClass("top")
+        .html(
+            "<div class='tooltip-inner'>" + tooltip.html() + "</div>" +
+            "<div class='tooltip-arrow'></div>")
+        .offset({
+            left: plotoffset.left + baroffset.left - tooltip.width() / 2,
+            top: plotoffset.top + baroffset.top - tooltip.height() - 20,
+        });
+    }
+
+    var plotobj = $.plot(elem, plotdata, {
+        series: {
+            lines: {
+                show: true,
+            },
+            points: {
+                show: true,
+            },
+        },
+        grid: {
+            show: true,
+            hoverable: true,
+        },
+        legend: {
+            show: true,
+            backgroundOpacity: 0.5,
+        },
+        xaxis: {
+            show: true,
+            transform: _xTransform,
+            inverseTransform: _xInvTransform,
+            ticks: _getTicks(Math.LN2, function(v) smartTime(v / 1000), 0, 25),
+        },
+        yaxis: {
+            show: true,
+            transform: _yTransform,
+            inverseTransform: _yInvTransform,
+            ticks: _getTicks(Math.LN10, options.normalize
+                ? smartPercent : smartPrefix, 1 - minratio, 12),
+            max: options.normalize ? 1 : undefined,
+        },
+        tooltip: true,
+        tooltipOpts: {
+            content: _tooltip,
+            onHover: _tooltipHover,
+        },
+    });
+}
+
 $("#navbar-normalize").prop("checked", false);
 
 $("#navbar-groupby").change(function() {
@@ -404,27 +588,38 @@ $("#navbar-groupby").change(function() {
     var infodim = $("#info-dim-value");
     var oldinfodim = infodim.val();
     infodim.empty().off("change");
+    var activitydim = $("#activity-dim-value");
+    var oldactivitydim;
+    if (activitydim.length) {
+        oldactivitydim = activitydim.val();
+        activitydim.empty().off("change");
+    }
 
     var val = $("#navbar-groupby").val();
     if (!val) {
         $.plot($("#report-plot"), [[0, 0]], {grid: {show: true}});
         $.plot($("#info-plot"), [[0, 0]], {grid: {show: false}});
+        if ($("#activity-plot").length) {
+            $.plot($("#activity-plot"), [[0, 0]], {grid: {show: true}});
+        }
         return;
     }
+    $("#activity-plot").prev("i.fa-spinner").fadeIn();
     $("#info-dim-name").text(val);
+    $("#activity-dim-name").text(val);
 
     var normalize = normbtn.prop("checked");
     var reports = null;
     var sessions = null;
     function replot() {
-        replotReports($("#report-plot"), reports, sessions);
+        replotReports($("#report-plot"), reports, sessions, {normalize: normalize});
         $("#report-plot").prev("i.fa-spinner").stop().fadeOut();
         infodim.trigger("change");
     }
 
     telemetry.reports(val, function(r) {
         reports = r;
-        repcount.text(reports.cumulativeCount());
+        repcount.text(smartPrefix(reports.cumulativeCount()));
 
         var values = reports.dimensionValues();
         values.sort(smartSort);
@@ -441,10 +636,39 @@ $("#navbar-groupby").change(function() {
             replotInfo($("#info-plot"),
                        reports,
                        infodim[0].selectedIndex == 0 ? null : infodim.val(),
-                       sessions);
+                       sessions,
+                       {normalize: normalize});
             $("#info-plot").prev("i.fa-spinner").stop().fadeOut();
         });
         (!normalize || sessions) && replot();
+    });
+
+    telemetry.sessions(val, function(s) {
+        sessions = s;
+        var activities = s.all(function(n) n.indexOf("activity:") === 0);
+        if (activities.length) {
+            var values = s.dimensionValues();
+            values.sort(smartSort);
+            values.unshift("any");
+            values.forEach(function(value) {
+                activitydim.append($("<option/>").text(value))
+            });
+            if (values.indexOf(oldactivitydim) >= 0) {
+                activitydim.val(oldactivitydim);
+            } else {
+                activitydim[0].selectedIndex = 0;
+            }
+            activitydim.change(function() {
+                replotActivities($("#activity-plot"), activities,
+                    activitydim[0].selectedIndex == 0 ? null : activitydim.val(),
+                    {normalize: normalize});
+                $("#activity-plot").prev("i.fa-spinner").stop().fadeOut();
+            });
+        }
+        if (normalize) {
+            normbtn.trigger("change");
+        }
+        activitydim.length && activitydim.trigger("change");
     });
 
     normbtn.change(function() {
@@ -452,16 +676,15 @@ $("#navbar-groupby").change(function() {
         $("#info-plot").prev("i.fa-spinner").fadeIn();
 
         normalize = normbtn.prop("checked");
-        if (normalize) {
-            telemetry.sessions(val, function(s) {
-                $("#report-units").text("(per 1k user-hours)");
-                sessions = s;
-                reports && replot();
-            });
-        } else {
+        if (!normalize) {
             $("#report-units").text("");
-            sessions = null;
             reports && replot();
+        } else if (sessions) {
+            $("#report-units").text("(per 1k user-hours)");
+            reports && replot();
+        }
+        if (sessions && activitydim.length) {
+            activitydim.trigger("change");
         }
     }).trigger("change");
 }).trigger("change");

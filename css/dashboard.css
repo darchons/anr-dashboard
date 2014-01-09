@@ -1,6 +1,11 @@
 
 body {
-    margin: 2em auto;
+    margin: 90px auto 2em auto;
+}
+
+.navbar-fixed-top.container {
+    border: 14px solid white;
+    border-bottom: 8px solid white;
 }
 
 .navbar-form {
@@ -16,9 +21,9 @@ body {
     max-width: none;
 }
 
-#report-plot-stack {
+#report-plots {
     text-align: left;
-    margin: 5px;
+    margin-bottom: 10px;
 }
 
 .tooltip hr {
@@ -39,7 +44,7 @@ body {
     width: 100%;
 }
 
-#report-stacks .panel-title {
+#report-stacks .panel-title, #report-plots .panel-title {
     cursor: pointer;
     padding: 5px;
 }
