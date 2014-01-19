@@ -228,8 +228,12 @@ function replotReports(elem, reports, sessions, options) {
         report.mainThread(function(threads) {
             var stack = "<hr>";
             var count = 0;
-            threads[0].stack().every(function(frame, index) {
-                if (frame.isNative()) {
+            var stackobj = threads[0].stack();
+            var skipNative = stackobj.some(
+                function(frame) !frame.isNative());
+            stackobj.every(function(frame, index) {
+                if ((skipNative && frame.isNative()) ||
+                    (!skipNative && !isNaN(parseInt(frame.functionName())))) {
                     return true;
                 }
                 var line = replaceBrackets(frame.lineNumber());
