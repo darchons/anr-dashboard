@@ -32,13 +32,13 @@ $("#navbar-filter").popover({
     }
 });
 
-var re_grouping = /\D+|\d+/g;
+var re_grouping = /\D+|\d+[ETGMkmμnpf]?/g;
 function smartSort(str1, str2) {
     var match1 = (str1 + '').match(re_grouping);
     var match2 = (str2 + '').match(re_grouping);
     for (var i = 0; i < match1.length && i < match2.length; i++) {
-        var diff = match1[i] - match2[i];
-        if (!isNaN(diff)) {
+        if (!isNaN(parseInt(match1[i])) && !isNaN(parseInt(match2[i]))) {
+            var diff = revSmartPrefix(match1[i]) - revSmartPrefix(match2[i]);
             if (diff !== 0) {
                 return diff;
             }
@@ -70,10 +70,24 @@ function _smartUnits(values, names, precisions) {
         return value.toPrecision(precisions[precisions.length - 1]);
     };
 }
+function _revSmartUnits(values, names) {
+    return function(value) {
+        value = value + '';
+        for (var i = 0; i < values.length; i++) {
+            if (value.indexOf(names[i], value.length - names[i].length) > -1) {
+                return +(value.slice(0, value.length - names[i].length)) * values[i];
+            }
+        }
+        return parseFloat(value);
+    };
+}
 var smartPrefix = _smartUnits(
     [1e15, 1e12, 1e9, 1e6, 1e3, 1, 1e-3, 1e-6, 1e-9, 1e-12, 1e-15],
     ['E', 'T', 'G', 'M', 'k', '', 'm', 'μ', 'n', 'p', 'f', ''],
     [3]);
+var revSmartPrefix = _revSmartUnits(
+    [1e15, 1e12, 1e9, 1e6, 1e3, 1e-3, 1e-6, 1e-9, 1e-12, 1e-15, 1],
+    ['E', 'T', 'G', 'M', 'k', 'm', 'μ', 'n', 'p', 'f', '']);
 var smartTime = _smartUnits(
     [31556952, 604800, 86400, 3600, 60, 1, 1e-3, 1e-6, 1e-9, 1e-12],
     ['y', 'w', 'd', 'h', 'm', 's', 'ms', 'μs', 'ns', 'ps', ''],
@@ -91,6 +105,9 @@ function fillReportModal(modal, report, dimValue, sessions, options) {
     var infoPlot = $("#report-info-plot");
     var infoPlotted = false;
     infoPlot.prev("i.fa-spinner").fadeIn();
+    var buildPlot = $("#report-build-plot");
+    var buildPlotted = false;
+    buildPlot.prev("i.fa-spinner").fadeIn();
     var activityPlot = $("#report-activity-plot");
     var activityPlotted = false;
     if (activityPlot.length) {
@@ -155,6 +172,11 @@ function fillReportModal(modal, report, dimValue, sessions, options) {
             infoPlot.prev("i.fa-spinner").stop().fadeOut();
             infoPlotted = true;
         }
+        if (!buildPlotted && $("#report-plots-build").hasClass("in")) {
+            replotBuild(buildPlot, report, dimValue, sessions, options);
+            buildPlot.prev("i.fa-spinner").stop().fadeOut();
+            buildPlotted = true;
+        }
         if (activityPlot.length &&
             !activityPlotted && $("#report-plots-activity").hasClass("in")) {
             replotActivities(activityPlot, [report], dimValue,
@@ -164,9 +186,11 @@ function fillReportModal(modal, report, dimValue, sessions, options) {
         }
     }
     $("#report-plots-info").on("shown.bs.collapse", _plot);
+    $("#report-plots-build").on("shown.bs.collapse", _plot);
     $("#report-plots-activity").on("shown.bs.collapse", _plot);
     modal.on("shown.bs.modal", _plot).on("hidden.bs.modal", function(event) {
         $.plot(infoPlot, [[0, 0]], {grid: {show: false}});
+        $.plot(buildPlot, [[0, 0]], {grid: {show: true}});
         $.plot(activityPlot, [[0, 0]], {grid: {show: true}});
     });
 }
@@ -443,6 +467,114 @@ function replotInfo(elem, reports, value, sessions, options) {
             show: false,
         },
         colors: colors,
+        tooltip: true,
+        tooltipOpts: {
+            content: _tooltip,
+            onHover: _tooltipHover,
+        },
+    });
+}
+
+function replotBuild(elem, reports, value, sessions, options) {
+    options = options || {};
+
+    var uptimes = null;
+    if (options.normalize) {
+        uptimes = sessions.byName('uptime').infoDistribution(value).appBuildID;
+        Object.keys(uptimes).forEach(function(val) {
+            if (uptimes[val] < 600) {
+                delete uptimes[val];
+            } else {
+                uptimes[val] = uptimes[val] / 60000;
+            }
+        });
+    }
+
+    var builds = reports.infoDistribution(value).appBuildID;
+    var versions = {};
+    var buildids = {};
+    Object.keys(builds).forEach(function(build) {
+        if (uptimes && !uptimes[build]) {
+            return;
+        }
+        var comps = build.split("-");
+        var version = (comps.length === 1) ? "all" : comps[0];
+        var buildid = (comps.length === 1) ? comps[0] : comps[1];
+        versions[version] = versions[version] || {};
+        versions[version][buildid] = builds[build];
+        if (uptimes) {
+            versions[version][buildid] = versions[version][buildid] / uptimes[build];
+        }
+        buildids[buildid] = true;
+    });
+    buildids = Object.keys(buildids).sort(smartSort);
+
+    var ticks = {};
+    var plotdata = Object.keys(versions).sort(smartSort).map(function(version) {
+        var builds = versions[version];
+        var ids = Object.keys(builds).sort(smartSort);
+        ticks[ids[0]] = true;
+        ticks[ids[ids.length - 1]] = true;
+        if (ids[0] !== buildids[0]) {
+            ids.unshift(buildids[buildids.indexOf(ids[0]) - 1]);
+        }
+        if (ids[ids.length - 1] !== buildids[buildids.length - 1]) {
+            ids.push(buildids[buildids.indexOf(ids[ids.length - 1]) + 1]);
+        }
+        return {
+            label: version,
+            data: ids.map(function(build) {
+                return [buildids.indexOf(build), builds[build] || 0];
+            }),
+        };
+    });
+
+    function _tooltip(label, xval, yval, item) {
+        var num = item.series.data[item.dataIndex][1];
+        var tip = buildids[item.dataIndex] + "<br>" +
+                  ((!uptimes || num >= 10) ? smartPrefix(Math.round(num))
+                                           : num.toPrecision(2)) +
+                  " hang" + (num === 1 ? "" : "s");
+        options.normalize && (tip += " / 1k user-hrs");
+        return tip;
+    }
+    function _tooltipHover(item, tooltip) {
+        var baroffset = plotobj.pointOffset({
+            x: item.datapoint[0],
+            y: item.datapoint[1],
+        });
+        var plotoffset = elem.offset();
+        tooltip.removeClass("right bottom left").addClass("top")
+        .html(
+            "<div class='tooltip-inner'>" + tooltip.html() + "</div>" +
+            "<div class='tooltip-arrow'></div>")
+        .offset({
+            left: plotoffset.left + baroffset.left - tooltip.width() / 2,
+            top: plotoffset.top + baroffset.top - tooltip.height() - 20,
+        });
+    }
+
+    var plotobj = $.plot(elem, plotdata, {
+        series: {
+            lines: {
+                show: true,
+                zero: true,
+            },
+        },
+        grid: {
+            show: true,
+            hoverable: true,
+        },
+        xaxis: {
+            show: true,
+            ticks: Object.keys(ticks).map(function(buildid) {
+                return [buildids.indexOf(buildid), buildid];
+            }),
+        },
+        yaxis: {
+            show: true,
+            tickFormatter: smartPrefix,
+        },
         tooltip: true,
         tooltipOpts: {
             content: _tooltip,
