@@ -509,23 +509,30 @@ function replotBuild(elem, reports, value, sessions, options) {
     });
     buildids = Object.keys(buildids).sort(smartSort);
 
-    var ticks = {};
-    var plotdata = Object.keys(versions).sort(smartSort).map(function(version) {
+    var ticks = [];
+    var plotdata = Object.keys(versions).sort(revSmartSort).map(function(version) {
         var builds = versions[version];
         var ids = Object.keys(builds).sort(smartSort);
-        ticks[ids[0]] = true;
-        ticks[ids[ids.length - 1]] = true;
-        if (ids[0] !== buildids[0]) {
-            ids.unshift(buildids[buildids.indexOf(ids[0]) - 1]);
+
+        function addTick(id) {
+            var index = buildids.indexOf(id);
+            if (ticks.some(function(tick) {
+                    return Math.abs(tick[0] - index) < buildids.length / 5;})) {
+                return;
+            }
+            ticks.push([index, id]);
         }
-        if (ids[ids.length - 1] !== buildids[buildids.length - 1]) {
-            ids.push(buildids[buildids.indexOf(ids[ids.length - 1]) + 1]);
-        }
+        addTick(ids[0]);
+        addTick(ids[ids.length - 1]);
+
         return {
             label: version,
             data: ids.map(function(build) {
                 return [buildids.indexOf(build), builds[build] || 0];
             }),
+            points: {
+                show: ids.length === 1,
+            },
         };
     });
 
@@ -567,9 +574,7 @@ function replotBuild(elem, reports, value, sessions, options) {
         },
         xaxis: {
             show: true,
-            ticks: Object.keys(ticks).map(function(buildid) {
-                return [buildids.indexOf(buildid), buildid];
-            }),
+            ticks: ticks,
         },
         yaxis: {
             show: true,
