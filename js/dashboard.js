@@ -32,7 +32,7 @@ $("#navbar-filter").popover({
     }
 });
 
-var re_grouping = /\D+|\d+[ETGMkmμnpf]?/g;
+var re_grouping = /\D+|\d+(\.\d+)?[ETGMkmμnpf]?/g;
 function smartSort(str1, str2) {
     var match1 = (str1 + '').match(re_grouping);
     var match2 = (str2 + '').match(re_grouping);
