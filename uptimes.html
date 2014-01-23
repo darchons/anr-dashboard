@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Usage Dashboard</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap -->
+    <link href="https://netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/rickshaw/1.4.6/rickshaw.min.css" rel="stylesheet">
+    <style type="text/css">
+      .panel-body>div {
+        height: 200px;
+      }
+      .panel-body svg {
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+
+    <div class="container">
+      <div class="navbar navbar-default" role="navigation">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle"
+                  data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle header</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <span class="navbar-brand">Usage Dashboard</span>
+        </div>
+
+        <div class="navbar-collapse collapse">
+        </div>
+      </div>
+
+      <div id="plots">
+      </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://code.jquery.com/jquery.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/datejs/1.0/date.min.js"></script>
+    <!-- d3 library -->
+    <!--<script src="https://raw.github.com/mbostock/d3/master/d3.js"></script>-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.4.0/d3.min.js"></script>
+    <!--<script src="https://github.com/novus/nvd3/raw/master/nv.d3.js"></script>-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/rickshaw/1.4.6/rickshaw.min.js"></script>
+
+    <script src="js/uptimes.js"></script>
+  </body>
+</html>
