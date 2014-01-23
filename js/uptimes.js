@@ -116,10 +116,10 @@ d3.text(uri, "text/plain", function(error, raw) {
             var hoverDetail = new Rickshaw.Graph.HoverDetail( {
                 graph: graph,
                 xFormatter: function(x) {
-                    return d.average[Math.floor(x)].label;
+                    return d.data[Math.floor(x)].label;
                 },
                 formatter: function(series, x, y) {
-                    return d.average[Math.floor(x)].label + ": " + y;
+                    return d.data[Math.floor(x)].label + ": " + y;
                 },
             } );
         });
