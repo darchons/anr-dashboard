@@ -746,6 +746,7 @@ $("#navbar-groupby").change(function() {
         return;
     }
     $("#info-dim-name").text(val);
+    $("#report-modal-dim-name").text(val);
     $("#activity-dim-name").text(val);
 
     var reports = null;
