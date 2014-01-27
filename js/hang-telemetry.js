@@ -96,18 +96,12 @@ HangTelemetry.prototype = {
     },
 
     _sumCount: function(count) {
-        if (typeof count === "number") {
-            return count;
-        }
         return Object.keys(count).reduce(function(prev, key) {
             return prev + count[key];
         }, 0);
     },
 
     _mergeCount: function(dest, src) {
-        if (typeof src === "number") {
-            return (dest || 0) + src;
-        }
         dest = dest || {};
         for (var key in src) {
             dest[key] = (dest[key] || 0) + src[key];
@@ -119,9 +113,18 @@ HangTelemetry.prototype = {
         for (var info in histograms) {
             var agg_histogram = agg[info] || {};
             var histogram = histograms[info];
-            for (var value in histogram) {
-                agg_histogram[value] = (agg_histogram[value] || 0) +
-                    this._sumCount(histogram[value]);
+            var value;
+            for (value in histogram) break;
+            if (typeof histogram[value] === "number") {
+                for (value in histogram) {
+                    agg_histogram[value] = (agg_histogram[value] || 0) +
+                                           histogram[value];
+                }
+            } else {
+                for (value in histogram) {
+                    agg_histogram[value] = (agg_histogram[value] || 0) +
+                        this._sumCount(histogram[value]);
+                }
             }
             agg[info] = agg_histogram;
         }
@@ -132,10 +135,19 @@ HangTelemetry.prototype = {
         for (var info in histograms) {
             var count = 0;
             var histogram = histograms[info];
-            for (var value in histogram) {
-                count = this._mergeCount(count, histogram[value]);
+            var value;
+            for (value in histogram) break;
+            if (typeof histogram[value] === "number") {
+                for (value in histogram) {
+                    count += histogram[value];
+                }
+            } else {
+                for (value in histogram) {
+                    count = this._mergeCount(count, histogram[value]);
+                }
             }
-            var sum = this._sumCount(count);
+            var sum = (typeof count === "number") ?
+                count : this._sumCount(count);
             if (sum > maxSum) {
                 maxSum = sum;
                 max = count;
@@ -253,10 +265,25 @@ CollectionItem.prototype = {
                     this._telemetry._countHistograms(
                         this._value_histograms[value]);
             } else {
-                var count = 0;
-                for (var val in this._value_histograms) {
-                    count = this._telemetry._mergeCount(count,
-                        this._telemetry._countHistograms(this._value_histograms[val]));
+                var firstVal;
+                for (firstVal in this._value_histograms) break;
+                var count = this._telemetry._countHistograms(
+                    this._value_histograms[firstVal]);
+                if (typeof count === "number") {
+                    for (var val in this._value_histograms) {
+                        if (firstVal !== val) {
+                            count += this._telemetry._countHistograms(
+                                this._value_histograms[val]);
+                        }
+                    }
+                } else {
+                    for (var val in this._value_histograms) {
+                        if (firstVal !== val) {
+                            count = this._telemetry._mergeCount(count,
+                                this._telemetry._countHistograms(
+                                this._value_histograms[val]));
+                        }
+                    }
                 }
                 this._value_count[value] = count;
             }
@@ -265,7 +292,11 @@ CollectionItem.prototype = {
     },
 
     count: function(dimensionValue) {
-        return this._telemetry._sumCount(this.rawCount(dimensionValue));
+        var count = this.rawCount(dimensionValue);
+        if (typeof count === "number") {
+            return count;
+        }
+        return this._telemetry._sumCount(count);
     },
 
     infoDistribution: function(dimensionValue) {

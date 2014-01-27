@@ -4,7 +4,7 @@ $(function() {
 
 var serverUri = "http://people.mozilla.org/~nchen/bhrs/bhr-{from}-{to}/summary.txt";
 
-var toDate = Date.today().last().saturday().last().saturday();
+var toDate = Date.today().last().saturday();
 if (Date.today().isBefore(
         toDate.clone().next().day()
             .add(-toDate.getTimezoneOffset()).minutes()

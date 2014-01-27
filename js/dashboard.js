@@ -538,7 +538,7 @@ function replotBuild(elem, reports, value, sessions, options) {
 
     function _tooltip(label, xval, yval, item) {
         var num = item.series.data[item.dataIndex][1];
-        var tip = buildids[item.dataIndex] + "<br>" +
+        var tip = buildids[item.series.data[item.dataIndex][0]] + "<br>" +
                   ((!uptimes || num >= 10) ? smartPrefix(Math.round(num))
                                            : num.toPrecision(2)) +
                   " hang" + (num === 1 ? "" : "s");
@@ -745,17 +745,41 @@ $("#navbar-groupby").change(function() {
         }
         return;
     }
-    $("#activity-plot").prev("i.fa-spinner").fadeIn();
     $("#info-dim-name").text(val);
+    $("#report-modal-dim-name").text(val);
     $("#activity-dim-name").text(val);
 
-    var normalize = normbtn.prop("checked");
     var reports = null;
     var sessions = null;
+    var normalize = normbtn.prop("checked");
+    var plottedVars = {};
+
     function replot() {
-        replotReports($("#report-plot"), reports, sessions, {normalize: normalize});
-        $("#report-plot").prev("i.fa-spinner").stop().fadeOut();
-        infodim.trigger("change");
+        var updateVars = {};
+        if (!reports || (normalize && !sessions)) {
+            $("#report-plot").prev("i.fa-spinner").fadeIn();
+            $("#info-plot").prev("i.fa-spinner").fadeIn();
+        } else if (reports !== plottedVars.reports ||
+                   (normalize && sessions !== plottedVars.sessions) ||
+                   normalize !== plottedVars.normalize) {
+            replotReports($("#report-plot"), reports, sessions, {normalize: normalize});
+            $("#report-plot").prev("i.fa-spinner").stop().fadeOut();
+            infodim.trigger("change");
+            updateVars.reports = updateVars.normalize = true;
+            normalize && (updateVars.sessions = true);
+        }
+        if (activitydim.length) {
+            if (!sessions) {
+                $("#activity-plot").prev("i.fa-spinner").fadeIn();
+            } else if (sessions !== plottedVars.sessions ||
+                       normalize !== plottedVars.normalize) {
+                activitydim.trigger("change");
+                updateVars.sessions = true;
+            }
+        }
+        updateVars.reports && (plottedVars.reports = reports);
+        updateVars.sessions && (plottedVars.sessions = sessions);
+        updateVars.normalize && (plottedVars.normalize = normalize);
     }
 
     telemetry.reports(val, function(r) {
@@ -781,7 +805,7 @@ $("#navbar-groupby").change(function() {
                        {normalize: normalize});
             $("#info-plot").prev("i.fa-spinner").stop().fadeOut();
         });
-        (!normalize || sessions) && replot();
+        replot();
     });
 
     telemetry.sessions(val, function(s) {
@@ -806,28 +830,20 @@ $("#navbar-groupby").change(function() {
                 $("#activity-plot").prev("i.fa-spinner").stop().fadeOut();
             });
         }
-        if (normalize) {
-            normbtn.trigger("change");
-        }
-        activitydim.length && activitydim.trigger("change");
+        replot();
     });
 
     normbtn.change(function() {
-        $("#report-plot").prev("i.fa-spinner").fadeIn();
-        $("#info-plot").prev("i.fa-spinner").fadeIn();
-
         normalize = normbtn.prop("checked");
         if (!normalize) {
             $("#report-units").text("");
-            reports && replot();
-        } else if (sessions) {
+        } else {
             $("#report-units").text("(per 1k user-hours)");
-            reports && replot();
         }
-        if (sessions && activitydim.length) {
-            activitydim.trigger("change");
-        }
-    }).trigger("change");
+        replot();
+    });
+
+    replot();
 }).trigger("change");
 
 $("#navbar-from").change(function() {
