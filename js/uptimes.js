@@ -71,15 +71,16 @@ d3.text(uri, "text/plain", function(error, raw) {
         .selectAll("div")
         .data(Object.keys(dimensions)
                     .sort(smartSort)
-                    .map(function(d) rows.filter(
-                        function(row) row.dimension === d)));
+                    .map(function(d) {
+                        return rows.filter(function(row) {
+                            return row.dimension === d; }); }));
 
     var panel = plots.enter()
         .append("div")
         .classed("panel panel-default", true);
     panel.append("div")
          .classed("panel-heading", true)
-         .text(function(d) d[0].dimension);
+         .text(function(d) { return d[0].dimension; });
 
     var row = panel.append("div")
          .classed("panel-body row", true)
@@ -92,11 +93,11 @@ d3.text(uri, "text/plain", function(error, raw) {
                 dimension: dim,
                 data: d.sort(function(a, b)
                         smartSort(a.value, b.value))
-                    .map(function(row, i) ({
+                    .map(function(row, i) { return {
                         x: i,
                         y: row.count,
                         label: row.value,
-                    })),
+                    }; }),
             };
         })
         .each(function(d) {
@@ -128,21 +129,21 @@ d3.text(uri, "text/plain", function(error, raw) {
         .classed("col-md-6", true)
         .datum(function(d) {
             return {
-                average: d.map(function(row, i) ({
+                average: d.map(function(row, i) { return {
                         x: i,
                         y: row.average,
                         label: row.value,
-                    })),
-                low: d.map(function(row, i) ({
+                    }; }),
+                low: d.map(function(row, i) { return {
                         x: i,
                         y: row.low,
                         label: row.value,
-                    })),
-                high: d.map(function(row, i) ({
+                    }; }),
+                high: d.map(function(row, i) { return {
                         x: i,
                         y: row.high,
                         label: row.value,
-                    })),
+                    }; }),
             };
         })
         .each(function(d) {
