@@ -254,7 +254,7 @@ function replotReports(elem, reports, sessions, options) {
             var count = 0;
             var stackobj = threads[0].stack();
             var skipNative = stackobj.some(
-                function(frame) !frame.isNative());
+                function(frame) { return !frame.isNative(); });
             stackobj.every(function(frame, index) {
                 if ((skipNative && frame.isNative()) ||
                     (!skipNative && !isNaN(parseInt(frame.functionName())))) {
@@ -600,7 +600,7 @@ function replotActivities(elem, activities, value, options) {
         var alltimes = Object.keys(count);
         if (options.normalize) {
             minratio = Math.min(minratio, 1 / alltimes.reduce(
-                function(prev, t) prev + count[t], 0));
+                function(prev, t) { return prev + count[t]; }, 0));
         }
         return {
             min: Math.min(prev.min, Math.min.apply(Math, alltimes)),
@@ -614,11 +614,13 @@ function replotActivities(elem, activities, value, options) {
         var name = act.name();
         var count = act.rawCount(value);
         var ratio = !options.normalize ? 1 :
-            1 / Object.keys(count).reduce(function(prev, t) prev + count[t], 0);
+            1 / Object.keys(count).reduce(
+                function(prev, t) { return prev + count[t]; }, 0);
         return {
             label: options.noname ? undefined : name.substring(name.indexOf(":") + 1),
-            data: times.filter(function(t) t >= endtimes.min && t <= endtimes.max)
-                       .map(function(t) [t, (count[t] || 0) * ratio]),
+            data: times.filter(function(t) {
+                        return t >= endtimes.min && t <= endtimes.max; })
+                       .map(function(t) { return [t, (count[t] || 0) * ratio]; }),
         };
     });
     minratio = 1 - Math.ceil(Math.log(minratio) / Math.LN10);
@@ -654,9 +656,9 @@ function replotActivities(elem, activities, value, options) {
         var labelFn = options.normalize ? smartPercent : smartPrefix;
         var at = labelFn(item.series.data[item.dataIndex][1]);
         var below = labelFn(item.series.data.slice(0, item.dataIndex).reduce(
-                function(prev, d) prev + d[1], 0));
+                function(prev, d) { return prev + d[1]; }, 0));
         var above = labelFn(item.series.data.slice(item.dataIndex + 1).reduce(
-                function(prev, d) prev + d[1], 0));
+                function(prev, d) { return prev + d[1]; }, 0));
         var prevtime = (item.dataIndex === 0 ? "" :
             smartTime(item.series.data[item.dataIndex - 1][0] / 1000));
         var time = smartTime(item.series.data[item.dataIndex][0] / 1000);
@@ -703,7 +705,8 @@ function replotActivities(elem, activities, value, options) {
             show: true,
             transform: _xTransform,
             inverseTransform: _xInvTransform,
-            ticks: _getTicks(Math.LN2, function(v) smartTime(v / 1000), 0, 25),
+            ticks: _getTicks(Math.LN2,
+                function(v) { return smartTime(v / 1000); }, 0, 25),
         },
         yaxis: {
             show: true,
@@ -810,7 +813,8 @@ $("#navbar-groupby").change(function() {
 
     telemetry.sessions(val, function(s) {
         sessions = s;
-        var activities = s.all(function(n) n.indexOf("activity:") === 0);
+        var activities = s.all(
+            function(n) { return n.indexOf("activity:") === 0; });
         if (activities.length) {
             var values = s.dimensionValues();
             values.sort(smartSort);
