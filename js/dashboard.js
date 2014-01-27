@@ -771,7 +771,8 @@ $("#navbar-groupby").change(function() {
         if (activitydim.length) {
             if (!sessions) {
                 $("#activity-plot").prev("i.fa-spinner").fadeIn();
-            } else if (sessions !== plottedVars.sessions) {
+            } else if (sessions !== plottedVars.sessions ||
+                       normalize !== plottedVars.normalize) {
                 activitydim.trigger("change");
                 updateVars.sessions = true;
             }
