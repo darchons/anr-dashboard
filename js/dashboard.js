@@ -538,7 +538,7 @@ function replotBuild(elem, reports, value, sessions, options) {
 
     function _tooltip(label, xval, yval, item) {
         var num = item.series.data[item.dataIndex][1];
-        var tip = buildids[item.dataIndex] + "<br>" +
+        var tip = buildids[item.series.data[item.dataIndex][0]] + "<br>" +
                   ((!uptimes || num >= 10) ? smartPrefix(Math.round(num))
                                            : num.toPrecision(2)) +
                   " hang" + (num === 1 ? "" : "s");
