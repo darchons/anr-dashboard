@@ -390,7 +390,13 @@ Thread.prototype = {
 };
 
 function StackFrame(frame) {
-    this._components = frame.split(':');
+    var sep1 = frame.indexOf(':');
+    var sep2 = frame.indexOf(':', sep1 + 1);
+    this._components = [
+        frame.slice(0, sep1),
+        frame.slice(sep1 + 1, sep2),
+        frame.slice(sep2 + 1),
+    ];
 }
 
 StackFrame.prototype = {
