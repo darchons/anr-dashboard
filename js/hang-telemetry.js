@@ -391,47 +391,54 @@ Thread.prototype = {
 
 function StackFrame(frame) {
     var sep1 = frame.indexOf(':');
-    var sep2 = frame.indexOf(':', sep1 + 1);
-    this._components = [
-        frame.slice(0, sep1),
-        frame.slice(sep1 + 1, sep2),
-        frame.slice(sep2 + 1),
-    ];
+    this._ident = frame.slice(0, sep1);
+
+    if (this.isNative() || this.isJava()) {
+        var sep2 = frame.indexOf(':', sep1 + 1);
+        this._components = [
+            frame.slice(sep1 + 1, sep2),
+            frame.slice(sep2 + 1),
+        ];
+    } else if (this.isPseudo()) {
+        this._components = [
+            frame.slice(sep1 + 1),
+        ];
+    }
 }
 
 StackFrame.prototype = {
 
     isNative: function() {
-        return this._components[0] === "c";
+        return this._ident === "c";
     },
 
     isJava: function() {
-        return this._components[0] === "j";
+        return this._ident === "j";
     },
 
     isPseudo: function() {
-        return this._components[0] === "p";
+        return this._ident === "p";
     },
 
     functionName: function() {
         if (this.isJava()) {
-            return this._components[1];
+            return this._components[0];
         } else if (this.isNative()) {
-            return this._components[2];
-        } else if (this.isPseudo()) {
             return this._components[1];
+        } else if (this.isPseudo()) {
+            return this._components[0];
         }
     },
 
     libName: function() {
         if (this.isNative()) {
-            return this._components[1];
+            return this._components[0];
         }
     },
 
     lineNumber: function() {
         if (this.isJava()) {
-            return this._components[2];
+            return this._components[1];
         }
     },
 };
