@@ -736,8 +736,6 @@ function replotActivities(elem, activities, value, options) {
     });
 }
 
-$("#navbar-normalize").prop("checked", false);
-
 $("#navbar-groupby").change(function() {
     var repcount = $("#navbar-count").text(0);
     var normbtn = $("#navbar-normalize").off("change");
