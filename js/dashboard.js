@@ -370,7 +370,7 @@ function replotInfo(elem, reports, value, sessions, options) {
             uptime[''] = Object.keys(uptime).reduce(
                 function(prev, val) {
                     var v = uptime[val];
-                    if (v < 600) {
+                    if (v < 6000) {
                         delete uptime[val];
                     }
                     return prev + v;
@@ -496,7 +496,7 @@ function replotBuild(elem, reports, value, sessions, options) {
     if (options.normalize) {
         uptimes = sessions.byName('uptime').infoDistribution(value).appBuildID;
         Object.keys(uptimes).forEach(function(val) {
-            if (uptimes[val] < 600) {
+            if (uptimes[val] < 6000) {
                 delete uptimes[val];
             } else {
                 uptimes[val] = uptimes[val] / 60000;
