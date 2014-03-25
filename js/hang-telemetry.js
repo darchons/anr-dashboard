@@ -148,7 +148,7 @@ HangTelemetry.prototype = {
             }
             var sum = (typeof count === "number") ?
                 count : this._sumCount(count);
-            if (maxSum < 0 || sum < maxSum) {
+            if (sum > maxSum) {
                 maxSum = sum;
                 max = count;
             }
