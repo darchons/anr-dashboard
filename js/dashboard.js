@@ -515,10 +515,10 @@ function replotBuild(elem, reports, value, sessions, options) {
         var version = (comps.length === 1) ? "all" : comps[0];
         var buildid = (comps.length === 1) ? comps[0] : comps[1];
         versions[version] = versions[version] || {};
-        versions[version][buildid] = builds[build];
         if (uptimes) {
-            versions[version][buildid] = versions[version][buildid] / uptimes[build];
+            builds[build] = builds[build] / uptimes[build];
         }
+        versions[version][buildid] = builds[build];
         buildids[buildid] = true;
     });
     buildids = Object.keys(buildids).sort(smartSort);
@@ -549,6 +549,20 @@ function replotBuild(elem, reports, value, sessions, options) {
             },
         };
     });
+
+    var buildsKeys = Object.keys(builds);
+    var upperCount = Math.min(10, Math.ceil(0.1 * buildsKeys.length));
+    var upperBound = Math.min.apply(Math, buildsKeys.reduce(function(bucket, build) {
+        var minIndex = bucket.indexOf(Math.min.apply(Math, bucket));
+        if (minIndex >= 0 && builds[build] > bucket[minIndex]) {
+            bucket[minIndex] = builds[build];
+            return bucket;
+        }
+        if (bucket.length < upperCount) {
+            bucket.push(builds[build])
+        }
+        return bucket;
+    }, [])) / (1 - upperCount / buildsKeys.length);
 
     function _tooltip(label, xval, yval, item) {
         var num = item.series.data[item.dataIndex][1];
@@ -593,7 +607,13 @@ function replotBuild(elem, reports, value, sessions, options) {
         },
         yaxis: {
             show: true,
+            min: 0,
+            max: upperBound,
             tickFormatter: smartPrefix,
+        },
+        legend: {
+            show: true,
+            position: "nw",
         },
         tooltip: true,
         tooltipOpts: {
