@@ -218,16 +218,16 @@ function replotReports(elem, reports, sessions, options) {
     values.sort(smartSort);
 
     var reports = reports.all();
-    function maxNormalizedCount(report) {
+    function sumNormalizedCount(report) {
         return values.reduce(function(prev, value) {
-            return Math.max(prev, report.count(value) / uptimes[value]);
+            return prev + report.count(value) / uptimes[value];
         }, 0);
     }
     reports.sort(function(r1, r2) {
         if (!uptimes) {
             return r1.count() - r2.count();
         }
-        return maxNormalizedCount(r1) - maxNormalizedCount(r2);
+        return sumNormalizedCount(r1) - sumNormalizedCount(r2);
     });
     var otherReports = reports.slice(0, -topReports);
 
@@ -250,11 +250,75 @@ function replotReports(elem, reports, sessions, options) {
         });
     });
 
+    function formatCount(num) {
+      return (!uptimes || num >= 10) ? smartPrefix(Math.round(num))
+                                     : num.toPrecision(2);
+    }
+    function formatFrame(frame, skipNative) {
+      if ((skipNative && frame.isNative()) ||
+          (!skipNative && !isNaN(parseInt(frame.functionName())))) {
+          return null;
+      }
+      var line = frame.lineNumber();
+      return replaceBrackets(frame.functionName() +
+          (line ? " (line " + line + ")" : ""));
+    }
+
+    var reportslist = $("#reports-list");
+    reportslist.empty();
+    reports.forEach(function (report, index) {
+      var rank = reports.length - index;
+      var dimvalues = $("<td/>").append(
+        $("<a/>").text("All (" +
+            formatCount(!uptimes ? report.count()
+                                 : sumNormalizedCount(report)) + ")")
+          .click(function() {
+            showModal(report, null, rank);
+          }));
+      var topframe = $("<td/>");
+      $("<tr/>").append([
+        $("<td/>").text(rank),
+        dimvalues,
+        topframe,
+      ]).prependTo(reportslist);
+
+      var reportvals = values.filter(function(value) {
+        return report.hasDimensionValue(value) && report.count(value);
+      });
+      reportvals.sort(function(v1, v2) {
+        return (report.count(v2) / (!uptimes ? 1 : uptimes[v2])) -
+               (report.count(v1) / (!uptimes ? 1 : uptimes[v1]));
+      });
+      reportvals.forEach(function(value, index) {
+        dimvalues.append(", ");
+        $("<a/>")
+          .text(value + " (" +
+                formatCount(report.count(value) /
+                            (!uptimes ? 1 : uptimes[value])) + ")")
+          .click(function() {
+            showModal(report, value, rank);
+          })
+          .appendTo(dimvalues);
+      });
+
+      report.mainThread(function(threads) {
+        var stackobj = threads[0].stack();
+        var skipNative = stackobj.some(
+          function(frame) { return !frame.isNative(); });
+        stackobj.some(function(frame, index) {
+          var formatted = formatFrame(frame, skipNative);
+          if (formatted) {
+            topframe.text(formatted);
+          }
+          return !!formatted;
+        });
+      });
+    });
+
     function _tooltip(label, xval, yval, item) {
         var num = item.series.data[item.dataIndex][1];
         var tip = values[item.dataIndex] + " : " +
-                  ((!uptimes || num >= 10) ? smartPrefix(Math.round(num))
-                                           : num.toPrecision(2)) +
+                  formatCount(num) +
                   " hang" + (num === 1 ? "" : "s");
         options.normalize && (tip += " / 1k user-hrs");
         var report = item.series.report;
@@ -270,14 +334,11 @@ function replotReports(elem, reports, sessions, options) {
             var skipNative = stackobj.some(
                 function(frame) { return !frame.isNative(); });
             stackobj.every(function(frame, index) {
-                if ((skipNative && frame.isNative()) ||
-                    (!skipNative && !isNaN(parseInt(frame.functionName())))) {
+                var formatted = formatFrame(frame, skipNative);
+                if (!formatted) {
                     return true;
                 }
-                var line = frame.lineNumber();
-                stack += (count ? "<br>" : "") + replaceBrackets(
-                    frame.functionName() +
-                    (line ? " (line " + line + ")" : ""));
+                stack += (count ? "<br>" : "") + formatted;
                 return (++count) < maxStackFrames;
             });
             if (out) {
@@ -342,19 +403,24 @@ function replotReports(elem, reports, sessions, options) {
         },
     });
 
+    function showModal(report, dimValue, rank) {
+        var modal = $("#report-modal");
+        $("#report-modal-rank").text(rank);
+        $("#report-modal-count").text(reports.length);
+        $("#report-modal-dim").text(dimValue || "All");
+        $("#report-modal-id").text(report.name());
+        fillReportModal(modal, report, dimValue, sessions, options);
+        modal.modal("show");
+    }
+
     elem.off("plotclick").on("plotclick", function(event, pos, item) {
         if (!item || !item.series.report) {
             return;
         }
-        var modal = $("#report-modal");
-        var dimValue = values[item.dataIndex];
         var report = item.series.report;
-        $("#report-modal-rank").text(topReports - item.seriesIndex + 1);
-        $("#report-modal-count").text(reports.length);
-        $("#report-modal-dim").text(dimValue);
-        $("#report-modal-id").text(report.name());
-        fillReportModal(modal, report, dimValue, sessions, options);
-        modal.modal("show");
+        var dimValue = values[item.dataIndex];
+        var rank = topReports - item.seriesIndex + 1;
+        showModal(report, dimValue, rank);
     });
 }
 
@@ -789,6 +855,7 @@ $("#navbar-groupby").change(function() {
     $("#info-dim-name").text(val);
     $("#report-modal-dim-name").text(val);
     $("#activity-dim-name").text(val);
+    $("#reports-dim-name").text(val);
 
     var reports = null;
     var sessions = null;
@@ -883,11 +950,9 @@ $("#navbar-groupby").change(function() {
 
     normbtn.change(function() {
         normalize = normbtn.prop("checked");
-        if (!normalize) {
-            $("#report-units").text("");
-        } else {
-            $("#report-units").text("(per 1k user-hours)");
-        }
+        var units = normalize ? "(per 1k user-hours)" : "";
+        $("#report-units").text(units);
+        $("#reports-units").text(units);
         replot();
     });
 
