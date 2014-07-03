@@ -218,16 +218,16 @@ function replotReports(elem, reports, sessions, options) {
     values.sort(smartSort);
 
     var reports = reports.all();
-    function maxNormalizedCount(report) {
+    function sumNormalizedCount(report) {
         return values.reduce(function(prev, value) {
-            return Math.max(prev, report.count(value) / uptimes[value]);
+            return prev + report.count(value) / uptimes[value];
         }, 0);
     }
     reports.sort(function(r1, r2) {
         if (!uptimes) {
             return r1.count() - r2.count();
         }
-        return maxNormalizedCount(r1) - maxNormalizedCount(r2);
+        return sumNormalizedCount(r1) - sumNormalizedCount(r2);
     });
     var otherReports = reports.slice(0, -topReports);
 
