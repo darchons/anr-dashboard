@@ -181,7 +181,8 @@ function fillReportModal(modal, report, dimValue, sessions, options) {
             !activityPlotted && $("#report-plots-activity").hasClass("in")) {
             var hangtime = sessions.byName("hangtime").filter(
                 function(name, dimval, info, val) {
-                    return dimval === dimValue && val === report.name();
+                    return (!dimValue || dimval === dimValue) &&
+                           val === report.name();
                 }
             );
             replotActivities(activityPlot, [hangtime], dimValue,
