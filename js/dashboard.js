@@ -96,7 +96,7 @@ function smartPercent(v) {
     return (v * 100).toPrecision(3) + "%";
 }
 
-function replaceBrackets(str) {
+function escapeHTML(str) {
     return str && str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
@@ -261,7 +261,7 @@ function replotReports(elem, reports, sessions, options) {
           return null;
       }
       var line = frame.lineNumber();
-      return replaceBrackets(frame.functionName() +
+      return escapeHTML(frame.functionName() +
           (line ? " (line " + line + ")" : ""));
     }
 
@@ -323,7 +323,7 @@ function replotReports(elem, reports, sessions, options) {
                   " hang" + (num === 1 ? "" : "s");
         options.normalize && (tip += " / 1k user-hrs");
         var report = item.series.report;
-        tip = replaceBrackets(tip);
+        tip = escapeHTML(tip);
         if (!report) {
             return tip;
         }
@@ -504,7 +504,7 @@ function replotInfo(elem, reports, value, sessions, options) {
     }
 
     function _tooltip(label, xval, yval, item) {
-        return replaceBrackets(item.series.info[item.dataIndex] + " : " +
+        return escapeHTML(item.series.info[item.dataIndex] + " : " +
                Math.round(item.series.data[item.dataIndex][0]) + "%");
     }
     function _tooltipHover(item, tooltip) {
@@ -634,9 +634,9 @@ function replotBuild(elem, reports, value, sessions, options) {
 
     function _tooltip(label, xval, yval, item) {
         var num = item.series.data[item.dataIndex][1];
-        var tip = replaceBrackets(buildids[
+        var tip = escapeHTML(buildids[
                     item.series.data[item.dataIndex][0]]) + "<br>" +
-                  replaceBrackets((!uptimes || num >= 10) ? smartPrefix(Math.round(num))
+                  escapeHTML((!uptimes || num >= 10) ? smartPrefix(Math.round(num))
                                            : num.toPrecision(2)) +
                   " hang" + (num === 1 ? "" : "s");
         options.normalize && (tip += " / 1k user-hrs");
@@ -757,7 +757,7 @@ function replotActivities(elem, activities, value, options) {
 
     function _tooltip(label, xval, yval, item) {
         var labelFn = function(val) {
-            return replaceBrackets(options.normalize ?
+            return escapeHTML(options.normalize ?
                 smartPercent(val) : smartPrefix(val));
         };
         var at = labelFn(item.series.data[item.dataIndex][1]);
@@ -765,12 +765,12 @@ function replotActivities(elem, activities, value, options) {
                 function(prev, d) { return prev + d[1]; }, 0));
         var above = labelFn(item.series.data.slice(item.dataIndex + 1).reduce(
                 function(prev, d) { return prev + d[1]; }, 0));
-        var prevtime = (item.dataIndex === 0 ? "" : replaceBrackets(
+        var prevtime = (item.dataIndex === 0 ? "" : escapeHTML(
             smartTime(item.series.data[item.dataIndex - 1][0] / 1000)));
-        var time = replaceBrackets(smartTime(
+        var time = escapeHTML(smartTime(
             item.series.data[item.dataIndex][0] / 1000));
         return (options.noname ? "" :
-                replaceBrackets(item.series.label) + "<br>") +
+                escapeHTML(item.series.label) + "<br>") +
             (item.dataIndex === 0 ? "&lt;" + time + ": " + at + "<br>"
                                   : prevtime + "-" + time + ": " + at + "<br>" +
                                     "&lt;" + prevtime + ": " + below + "<br>") +
