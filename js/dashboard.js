@@ -571,7 +571,8 @@ function replotBuild(elem, reports, value, sessions, options) {
         });
     }
 
-    var builds = reports.infoDistribution(value).appBuildID;
+    var builds = $.extend(true, {},
+        reports.infoDistribution(value).appBuildID);
     var versions = {};
     var buildids = {};
     Object.keys(builds).forEach(function(build) {
