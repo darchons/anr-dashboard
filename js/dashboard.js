@@ -119,6 +119,45 @@ function fillReportModal(modal, report, dimValue, sessions, options) {
     var template = $("#report-stacks-thread");
     stacks.children().not(template).not(".spinner-holder").remove();
 
+    function transformFrame(frame) {
+        var mxr;
+        frame = frame.replace(/\(mxr:([\w-]+):([\da-fA-F]+)\)/,
+            function(match, repo, rev) {
+                mxr = [repo, rev];
+                return "";
+            }).trim();
+
+        if (mxr) {
+            var search = true, string = frame, regexp, line;
+
+            var parts = frame.match(/(.+):(\d+)/);
+            if (parts && parts.length >= 3) {
+                search = false;
+                string = parts[1];
+                regexp = false;
+                line = parts[2];
+            }
+
+            parts = frame.match(/(.+)::(.+)/);
+            if (parts && parts.length >= 3) {
+                search = true;
+                string = 'LABEL.*' + parts[1] + '.*' + parts[2];
+                regexp = true;
+                line = null;
+            }
+
+            return '<a href="' +
+                   'https://mxr.mozilla.org/' + encodeURIComponent(mxr[0]) +
+                   '/' + (search ? 'search' : 'find') +
+                   '?rev=' + encodeURIComponent(mxr[1]) +
+                   '&string=' + encodeURIComponent(string) +
+                   (regexp ? '&regexp=1&case=on' : '') +
+                   (line ? '&line=' + encodeURIComponent(line) : '') +
+                   '">' + escapeHTML(frame) + '</a>';
+        }
+        return frame;
+    }
+
     function addThreads(threads, append) {
         var out = $();
         threads.forEach(function(thread) {
@@ -135,7 +174,7 @@ function fillReportModal(modal, report, dimValue, sessions, options) {
                 var lib = frame.libName();
                 var text = func + (lib ? " (" + lib + ")" : "")
                                 + (line ? " (line " + line + ")" : "");
-                $("<li/>").text(text)
+                $("<li/>").html(transformFrame(text))
                           .addClass(muteNative && frame.isNative() ? "text-muted" : "")
                           .appendTo(body);
             });
