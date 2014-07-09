@@ -141,8 +141,19 @@ function fillReportModal(modal, report, dimValue, sessions, options) {
             parts = frame.match(/(.+)::(.+)/);
             if (parts && parts.length >= 3) {
                 search = true;
-                string = 'LABEL.*' + parts[1] + '.*' + parts[2];
+                string = 'PROFILER_LABEL.*"' + parts[1] + '".*"' + parts[2] + '"';
                 regexp = true;
+                if (string.length > 28) {
+                    string = 'LABEL.*"' + parts[1] + '".*"' + parts[2] + '"';
+                }
+                if (string.length > 28) {
+                    string = '"' + parts[1] + '".*"' + parts[2] + '"';
+                }
+                if (string.length > 28) {
+                    string = '"' + (parts[1].length > parts[2].length ?
+                                    parts[1] : parts[2]) + '"';
+                    regexp = false;
+                }
                 line = null;
             }
 
@@ -153,7 +164,7 @@ function fillReportModal(modal, report, dimValue, sessions, options) {
                    '&string=' + encodeURIComponent(string) +
                    (regexp ? '&regexp=1&case=on' : '') +
                    (line ? '&line=' + encodeURIComponent(line) : '') +
-                   '">' + escapeHTML(frame) + '</a>';
+                   '" target="_blank">' + escapeHTML(frame) + '</a>';
         }
         return frame;
     }
