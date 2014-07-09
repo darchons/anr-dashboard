@@ -100,6 +100,59 @@ function escapeHTML(str) {
     return str && str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+function transformFrame(frame, plain) {
+    var mxr;
+    frame = frame.replace(/\(mxr:([\w-]+):([\da-fA-F]+)\)/,
+        function(match, repo, rev) {
+            mxr = [repo, rev];
+            return "";
+        }).trim();
+
+    if (mxr) {
+        if (plain) {
+            return escapeHTML(frame);
+        }
+
+        var search = true, string = frame, regexp, line;
+        var parts = frame.match(/(.+):(\d+)/);
+        if (parts && parts.length >= 3) {
+            search = false;
+            string = parts[1];
+            regexp = false;
+            line = parts[2];
+        }
+
+        parts = frame.match(/(.+)::(.+)/);
+        if (parts && parts.length >= 3) {
+            search = true;
+            string = 'PROFILER_LABEL.*"' + parts[1] + '".*"' + parts[2] + '"';
+            regexp = true;
+            if (string.length > 28) {
+                string = 'LABEL.*"' + parts[1] + '".*"' + parts[2] + '"';
+            }
+            if (string.length > 28) {
+                string = '"' + parts[1] + '".*"' + parts[2] + '"';
+            }
+            if (string.length > 28) {
+                string = '"' + (parts[1].length > parts[2].length ?
+                                parts[1] : parts[2]) + '"';
+                regexp = false;
+            }
+            line = null;
+        }
+
+        return '<a href="' +
+               'https://mxr.mozilla.org/' + encodeURIComponent(mxr[0]) +
+               '/' + (search ? 'search' : 'find') +
+               '?rev=' + encodeURIComponent(mxr[1]) +
+               '&string=' + encodeURIComponent(string) +
+               (regexp ? '&regexp=1&case=on' : '') +
+               (line ? '&line=' + encodeURIComponent(line) : '') +
+               '" target="_blank">' + escapeHTML(frame) + '</a>';
+    }
+    return frame;
+}
+
 function fillReportModal(modal, report, dimValue, sessions, options) {
     options = options || {};
     var infoPlot = $("#report-info-plot");
@@ -118,56 +171,6 @@ function fillReportModal(modal, report, dimValue, sessions, options) {
     var stacks = $("#report-stacks");
     var template = $("#report-stacks-thread");
     stacks.children().not(template).not(".spinner-holder").remove();
-
-    function transformFrame(frame) {
-        var mxr;
-        frame = frame.replace(/\(mxr:([\w-]+):([\da-fA-F]+)\)/,
-            function(match, repo, rev) {
-                mxr = [repo, rev];
-                return "";
-            }).trim();
-
-        if (mxr) {
-            var search = true, string = frame, regexp, line;
-
-            var parts = frame.match(/(.+):(\d+)/);
-            if (parts && parts.length >= 3) {
-                search = false;
-                string = parts[1];
-                regexp = false;
-                line = parts[2];
-            }
-
-            parts = frame.match(/(.+)::(.+)/);
-            if (parts && parts.length >= 3) {
-                search = true;
-                string = 'PROFILER_LABEL.*"' + parts[1] + '".*"' + parts[2] + '"';
-                regexp = true;
-                if (string.length > 28) {
-                    string = 'LABEL.*"' + parts[1] + '".*"' + parts[2] + '"';
-                }
-                if (string.length > 28) {
-                    string = '"' + parts[1] + '".*"' + parts[2] + '"';
-                }
-                if (string.length > 28) {
-                    string = '"' + (parts[1].length > parts[2].length ?
-                                    parts[1] : parts[2]) + '"';
-                    regexp = false;
-                }
-                line = null;
-            }
-
-            return '<a href="' +
-                   'https://mxr.mozilla.org/' + encodeURIComponent(mxr[0]) +
-                   '/' + (search ? 'search' : 'find') +
-                   '?rev=' + encodeURIComponent(mxr[1]) +
-                   '&string=' + encodeURIComponent(string) +
-                   (regexp ? '&regexp=1&case=on' : '') +
-                   (line ? '&line=' + encodeURIComponent(line) : '') +
-                   '" target="_blank">' + escapeHTML(frame) + '</a>';
-        }
-        return frame;
-    }
 
     function addThreads(threads, append) {
         var out = $();
@@ -305,14 +308,14 @@ function replotReports(elem, reports, sessions, options) {
       return (!uptimes || num >= 10) ? smartPrefix(Math.round(num))
                                      : num.toPrecision(2);
     }
-    function formatFrame(frame, skipNative) {
+    function formatFrame(frame, skipNative, plain) {
       if ((skipNative && frame.isNative()) ||
           (!skipNative && !isNaN(parseInt(frame.functionName())))) {
           return null;
       }
       var line = frame.lineNumber();
-      return escapeHTML(frame.functionName() +
-          (line ? " (line " + line + ")" : ""));
+      return transformFrame(frame.functionName() +
+          (line ? " (line " + line + ")" : ""), plain);
     }
 
     var reportslist = $("#reports-list");
@@ -359,7 +362,7 @@ function replotReports(elem, reports, sessions, options) {
         stackobj.some(function(frame, index) {
           var formatted = formatFrame(frame, skipNative);
           if (formatted) {
-            topframe.text(formatted);
+            topframe.html(formatted);
           }
           return !!formatted;
         });
@@ -385,7 +388,7 @@ function replotReports(elem, reports, sessions, options) {
             var skipNative = stackobj.some(
                 function(frame) { return !frame.isNative(); });
             stackobj.every(function(frame, index) {
-                var formatted = formatFrame(frame, skipNative);
+                var formatted = formatFrame(frame, skipNative, "plain");
                 if (!formatted) {
                     return true;
                 }
