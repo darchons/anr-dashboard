@@ -108,11 +108,7 @@ function transformFrame(frame, plain) {
             return "";
         }).trim();
 
-    if (mxr) {
-        if (plain) {
-            return escapeHTML(frame);
-        }
-
+    if (!plain && mxr) {
         var search = true, string = frame, regexp, line;
         var parts = frame.match(/(.+):(\d+)/);
         if (parts && parts.length >= 3) {
@@ -150,7 +146,26 @@ function transformFrame(frame, plain) {
                (line ? '&line=' + encodeURIComponent(line) : '') +
                '" target="_blank">' + escapeHTML(frame) + '</a>';
     }
-    return frame;
+
+    var hg;
+    frame = frame.replace(/\(hg:.+\/([\w-]+):(.+):([\da-fA-F]+):(\d+)\)/,
+        function(match, repo, file, rev, line) {
+            hg = [repo, file, rev, line];
+            return "";
+        }).trim();
+
+    if (!plain && hg) {
+        if (hg[1].indexOf('obj-') === 0) {
+            return escapeHTML(frame);
+        }
+        return '<a href="' +
+               'https://mxr.mozilla.org/' + encodeURIComponent(hg[0]) +
+               '/source/' + hg[1] +
+               '?rev=' + encodeURIComponent(hg[2]) +
+               '#' + encodeURIComponent(hg[3]) +
+               '" target="_blank">' + escapeHTML(frame) + '</a>';
+    }
+    return escapeHTML(frame);
 }
 
 function fillReportModal(modal, report, dimValue, sessions, options) {
