@@ -190,6 +190,17 @@ function fillReportModal(modal, report, dimValue, sessions, options) {
     function addThreads(threads, append) {
         var out = $();
         threads.forEach(function(thread) {
+            var dim;
+            var name = thread.name().replace(/\(dim:(.+):(.+)\)/,
+                function(match, dimname, dimval) {
+                    dim = [dimname, dimval];
+                    return dimValue ? "" : ("(" + dimval + " " + dimname + ")");
+                });
+            if (dim && (dim[0] !== $("#navbar-groupby").val() ||
+                        (dimValue && dimValue !== dimdim[1]))) {
+                return;
+            }
+
             var clone = template.clone()
                 .removeAttr("id").removeClass("hide");
             var body = clone.find(".panel-body");
@@ -213,7 +224,7 @@ function fillReportModal(modal, report, dimValue, sessions, options) {
                  .attr("id", id)
                  .addClass(append ? "" : "in");
             clone.find(".panel-heading")
-                 .text(thread.name() + " stack")
+                 .text(name + " stack")
                  .attr("data-target", "#" + id);
             out.add(append ? clone.appendTo(stacks)
                            : clone.prependTo(stacks));
