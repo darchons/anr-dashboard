@@ -108,11 +108,7 @@ function transformFrame(frame, plain) {
             return "";
         }).trim();
 
-    if (mxr) {
-        if (plain) {
-            return escapeHTML(frame);
-        }
-
+    if (!plain && mxr) {
         var search = true, string = frame, regexp, line;
         var parts = frame.match(/(.+):(\d+)/);
         if (parts && parts.length >= 3) {
@@ -150,7 +146,26 @@ function transformFrame(frame, plain) {
                (line ? '&line=' + encodeURIComponent(line) : '') +
                '" target="_blank">' + escapeHTML(frame) + '</a>';
     }
-    return frame;
+
+    var hg;
+    frame = frame.replace(/\(hg:.+\/([\w-]+):(.+):([\da-fA-F]+):(\d+)\)/,
+        function(match, repo, file, rev, line) {
+            hg = [repo, file, rev, line];
+            return "";
+        }).trim();
+
+    if (!plain && hg) {
+        if (hg[1].indexOf('obj-') === 0) {
+            return escapeHTML(frame);
+        }
+        return '<a href="' +
+               'https://mxr.mozilla.org/' + encodeURIComponent(hg[0]) +
+               '/source/' + hg[1] +
+               '?rev=' + encodeURIComponent(hg[2]) +
+               '#' + encodeURIComponent(hg[3]) +
+               '" target="_blank">' + escapeHTML(frame) + '</a>';
+    }
+    return escapeHTML(frame);
 }
 
 function fillReportModal(modal, report, dimValue, sessions, options) {
@@ -175,6 +190,17 @@ function fillReportModal(modal, report, dimValue, sessions, options) {
     function addThreads(threads, append) {
         var out = $();
         threads.forEach(function(thread) {
+            var dim;
+            var name = thread.name().replace(/\(dim:(.+):(.+)\)/,
+                function(match, dimname, dimval) {
+                    dim = [dimname, dimval];
+                    return dimValue ? "" : ("(" + dimval + " " + dimname + ")");
+                });
+            if (dim && (dim[0] !== $("#navbar-groupby").val() ||
+                        (dimValue && dimValue !== dimdim[1]))) {
+                return;
+            }
+
             var clone = template.clone()
                 .removeAttr("id").removeClass("hide");
             var body = clone.find(".panel-body");
@@ -198,7 +224,7 @@ function fillReportModal(modal, report, dimValue, sessions, options) {
                  .attr("id", id)
                  .addClass(append ? "" : "in");
             clone.find(".panel-heading")
-                 .text(thread.name() + " stack")
+                 .text(name + " stack")
                  .attr("data-target", "#" + id);
             out.add(append ? clone.appendTo(stacks)
                            : clone.prependTo(stacks));
@@ -630,6 +656,7 @@ function replotBuild(elem, reports, value, sessions, options) {
     var buildids = {};
     Object.keys(builds).forEach(function(build) {
         if (uptimes && !uptimes[build]) {
+            delete builds[build];
             return;
         }
         var comps = build.split("-");
@@ -684,6 +711,12 @@ function replotBuild(elem, reports, value, sessions, options) {
         }
         return bucket;
     }, [])) / (1 - upperCount / buildsKeys.length);
+
+    buildsKeys.sort(function(a, b) {
+        return builds[a] - builds[b];
+    });
+    upperBound = Math.max(upperBound,
+        2 * builds[buildsKeys[Math.floor(buildsKeys.length / 2)]]);
 
     function _tooltip(label, xval, yval, item) {
         var num = item.series.data[item.dataIndex][1];
