@@ -656,6 +656,7 @@ function replotBuild(elem, reports, value, sessions, options) {
     var buildids = {};
     Object.keys(builds).forEach(function(build) {
         if (uptimes && !uptimes[build]) {
+            delete builds[build];
             return;
         }
         var comps = build.split("-");
@@ -710,6 +711,12 @@ function replotBuild(elem, reports, value, sessions, options) {
         }
         return bucket;
     }, [])) / (1 - upperCount / buildsKeys.length);
+
+    buildsKeys.sort(function(a, b) {
+        return builds[a] - builds[b];
+    });
+    upperBound = Math.max(upperBound,
+        2 * builds[buildsKeys[Math.floor(buildsKeys.length / 2)]]);
 
     function _tooltip(label, xval, yval, item) {
         var num = item.series.data[item.dataIndex][1];
