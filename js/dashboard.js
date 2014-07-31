@@ -197,7 +197,7 @@ function fillReportModal(modal, report, dimValue, sessions, options) {
                     return dimValue ? "" : ("(" + dimval + " " + dimname + ")");
                 });
             if (dim && (dim[0] !== $("#navbar-groupby").val() ||
-                        (dimValue && dimValue !== dimdim[1]))) {
+                        (dimValue && dimValue !== dim[1]))) {
                 return;
             }
 
