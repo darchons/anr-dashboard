@@ -240,6 +240,9 @@ function fillReportModal(modal, report, dimValue, sessions, options) {
         }
     });
     report.backgroundThreads(function(threads) {
+        threads.sort(function(a,b) {
+            return smartSort(a.name(), b.name());
+        });
         addThreads(threads, /* append */ true);
         if (!(--hideSpinner)) {
             modal.find(".spinner-holder i").stop().fadeOut();
